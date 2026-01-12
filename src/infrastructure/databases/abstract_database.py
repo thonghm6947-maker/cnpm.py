@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-import psycopg2
-from psycopg2 import sql
+# import psycopg2  # Commented out - not needed for SQLite
+# from psycopg2 import sql
 # from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 from config import DevelopmentConfig,Config, FactoryConfig

@@ -28,7 +28,8 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
-    DATABASE_URI = os.environ.get('POSTGREE_DATABASE_URL')
+    # Use SQLite for development (no external database needed)
+    DATABASE_URI = os.environ.get('POSTGREE_DATABASE_URL') or 'sqlite:///careermate.db'
 
 
 class TestingConfig(Config):

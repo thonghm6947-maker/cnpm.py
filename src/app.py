@@ -10,14 +10,34 @@ from config import Config
 from flasgger import Swagger
 from config import SwaggerConfig
 from flask_swagger_ui import get_swaggerui_blueprint
+from cors import init_cors
+
+# CareerMate controllers
+from api.controllers.careermate.auth_controller import cm_auth_bp
+from api.controllers.careermate.job_controller import cm_job_bp
+from api.controllers.careermate.profile_controller import cm_profile_bp
+from api.controllers.careermate.recruiter_controller import cm_recruiter_bp
+from api.controllers.careermate.admin_controller import cm_admin_bp
 
 
 def create_app():
     app = Flask(__name__)
+    
+    # Enable CORS for frontend connection
+    init_cors(app)
+    
     Swagger(app)
     # Đăng ký blueprint trước
     app.register_blueprint(todo_bp)
     app.register_blueprint(auth_bp)
+    
+    # CareerMate API blueprints
+    app.register_blueprint(cm_auth_bp)
+    app.register_blueprint(cm_job_bp)
+    app.register_blueprint(cm_profile_bp)
+    app.register_blueprint(cm_recruiter_bp)
+    app.register_blueprint(cm_admin_bp)
+    
     # register_routes(app)
      # Thêm Swagger UI blueprint
     SWAGGER_URL = '/docs'

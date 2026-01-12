@@ -6,6 +6,27 @@ from infrastructure.models.auth import auth_user_model, auth_role_model,auth_fun
 from infrastructure.models.sell import sell_customer_model, sell_product_model, sell_invoice_model
 from infrastructure.models.pay import pay_tran_model
 
+# CareerMate models
+from infrastructure.models.careermate import (
+    CMUserModel,
+    SubscriptionPackageModel,
+    UserSubscriptionModel,
+    SkillModel,
+    CandidateProfileModel,
+    RecruiterProfileModel,
+    CompanyModel,
+    ResumeModel,
+    CVAnalysisModel,
+    JobPostModel,
+    JobApplicationModel,
+    SavedJobModel,
+    JobSkillModel,
+    CandidateSkillModel,
+    CareerRoadmapModel,
+    ChatSessionModel,
+    ChatMessageModel,
+)
+
 def init_db(app):
     # init_mssql(app)
     FactoryDatabase.get_database('POSTGREE').init_database(app)

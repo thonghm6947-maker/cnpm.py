@@ -44,6 +44,10 @@
 
 ## Infrastructure Layer
 
+## Setup VS Code Extensions
+Xem chi tiết các extension cần cài đặt tại [EXTENSIONS.md](./EXTENSIONS.md) để hỗ trợ code tốt nhất.
+
+
 ## Download source code (CMD)
     git clone https://github.com/ChienNguyensrdn/Flask-CleanArchitecture.git
 ## Kiểm tra đã cài python đã cài đặt trên máy chưa
