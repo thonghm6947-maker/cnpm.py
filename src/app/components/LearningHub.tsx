@@ -275,7 +275,7 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
                 </Card>
 
                 {/* Learning Streak */}
-                <Card className="p-6 bg-gradient-to-r from-orange-500 to-pink-500 text-white">
+                <Card className="p-6 bg-gradient-to-r from-blue-500 to-blue-700 text-white">
                   <div className="flex items-center gap-3 mb-3">
                     <Zap className="w-8 h-8" />
                     <div>
@@ -356,7 +356,7 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
                 </Card>
               ))}
 
-              <Card className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+              <Card className="p-6 bg-blue-600 text-white">
                 <h3 className="text-xl mb-3">Create Custom Roadmap</h3>
                 <p className="mb-4 opacity-90">
                   Let our AI create a personalized learning roadmap based on your career goals and current skills.
@@ -448,7 +448,7 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
                   </div>
                 </Card>
 
-                <Card className="p-6 bg-gradient-to-r from-green-600 to-teal-600 text-white">
+                <Card className="p-6 bg-blue-600 text-white">
                   <h3 className="mb-3">Next Achievement</h3>
                   <div className="text-4xl mb-2">🎯</div>
                   <h4 className="mb-2">Specialist Badge</h4>

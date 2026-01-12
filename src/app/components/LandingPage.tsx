@@ -46,9 +46,6 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             <Button size="lg" onClick={onLogin}>
               Start Your Journey
             </Button>
-            <Button size="lg" variant="outline">
-              Watch Demo
-            </Button>
           </div>
           
           {/* Hero Image */}
@@ -155,7 +152,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl my-12">
+      <section className="container mx-auto px-4 py-20 bg-blue-600 rounded-2xl my-12">
         <div className="max-w-3xl mx-auto text-center text-white">
           <h2 className="text-3xl mb-4">
             Ready to Start Your Career Journey?

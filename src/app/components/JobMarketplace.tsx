@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { 
-  Search, 
-  MapPin, 
+import {
+  Search,
+  MapPin,
   Briefcase,
   DollarSign,
   Clock,
@@ -17,9 +17,11 @@ import {
   Filter,
   TrendingUp,
   Star,
-  Bookmark
+  Bookmark,
+  Loader2
 } from 'lucide-react';
 import type { Page } from '../App';
+import { jobAPI } from '../../services/api';
 
 interface JobMarketplaceProps {
   onNavigate: (page: Page) => void;
@@ -28,102 +30,177 @@ interface JobMarketplaceProps {
 
 interface Job {
   id: number;
+  job_id?: string;
   title: string;
   company: string;
+  company_name?: string;
   location: string;
   type: string;
+  job_type?: string;
   salary: string;
+  salary_range?: string;
   posted: string;
+  created_at?: string;
   match: number;
   description: string;
   requirements: string[];
   isSaved: boolean;
+  is_saved?: boolean;
+}
+
+interface ApplicationStats {
+  applied: number;
+  inReview: number;
+  interviews: number;
+  savedJobs: number;
 }
 
 export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [savedJobs, setSavedJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('best-match');
+  const [applying, setApplying] = useState<number | null>(null);
+  const [stats, setStats] = useState<ApplicationStats>({
+    applied: 0,
+    inReview: 0,
+    interviews: 0,
+    savedJobs: 0
+  });
 
-  const jobs: Job[] = [
-    {
-      id: 1,
-      title: 'Frontend Developer Intern',
-      company: 'TechCorp',
-      location: 'Remote',
-      type: 'Internship',
-      salary: '$2,000 - $3,000/month',
-      posted: '2 days ago',
-      match: 92,
-      description: 'We are looking for a talented Frontend Developer Intern to join our growing team. You will work on building modern web applications using React and TypeScript.',
-      requirements: ['React.js', 'JavaScript', 'CSS', 'Git', 'Communication skills'],
-      isSaved: false
-    },
-    {
-      id: 2,
-      title: 'Junior React Developer',
-      company: 'StartupX',
-      location: 'Hybrid - San Francisco',
-      type: 'Full-time',
-      salary: '$60,000 - $80,000/year',
-      posted: '3 days ago',
-      match: 88,
-      description: 'Join our innovative startup as a Junior React Developer. You\'ll collaborate with senior developers to build cutting-edge web applications.',
-      requirements: ['React.js', 'TypeScript', 'REST APIs', 'Agile', 'Problem-solving'],
-      isSaved: true
-    },
-    {
-      id: 3,
-      title: 'UI/UX Developer',
-      company: 'DesignCo',
-      location: 'On-site - New York',
-      type: 'Full-time',
-      salary: '$55,000 - $75,000/year',
-      posted: '5 days ago',
-      match: 85,
-      description: 'We\'re seeking a UI/UX Developer who can bridge the gap between design and development. Experience with React and design tools required.',
-      requirements: ['React.js', 'CSS/SCSS', 'Figma', 'Responsive Design', 'User Testing'],
-      isSaved: false
-    },
-    {
-      id: 4,
-      title: 'Frontend Engineer - Entry Level',
-      company: 'WebSolutions Inc',
-      location: 'Remote',
-      type: 'Full-time',
-      salary: '$50,000 - $70,000/year',
-      posted: '1 week ago',
-      match: 82,
-      description: 'Entry-level position for passionate developers. We provide mentorship and growth opportunities in a supportive environment.',
-      requirements: ['JavaScript', 'HTML/CSS', 'React or Vue', 'Git', 'Teamwork'],
-      isSaved: false
-    },
-    {
-      id: 5,
-      title: 'Graduate Software Developer',
-      company: 'Enterprise Systems',
-      location: 'On-site - Chicago',
-      type: 'Graduate Program',
-      salary: '$65,000 - $75,000/year',
-      posted: '1 week ago',
-      match: 79,
-      description: 'Our graduate program offers rotations across different teams, comprehensive training, and career development support.',
-      requirements: ['Bachelor\'s Degree', 'JavaScript', 'Any Framework', 'SQL', 'Learning Mindset'],
-      isSaved: true
-    },
-    {
-      id: 6,
-      title: 'Web Developer Trainee',
-      company: 'Digital Agency',
-      location: 'Hybrid - Boston',
-      type: 'Contract',
-      salary: '$40,000 - $50,000/year',
-      posted: '2 weeks ago',
-      match: 75,
-      description: 'Join our agency as a trainee and gain hands-on experience building websites for various clients. Training provided.',
-      requirements: ['HTML/CSS', 'JavaScript Basics', 'Responsive Design', 'Communication', 'Creativity'],
-      isSaved: false
+  // Fetch jobs from API
+  useEffect(() => {
+    fetchJobs();
+    fetchSavedJobs();
+    fetchApplicationStats();
+  }, []);
+
+  const fetchJobs = async (search = '', location = '') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await jobAPI.list(1, 20, search, location);
+      if (result.jobs) {
+        const mappedJobs: Job[] = result.jobs.map((job: any) => ({
+          id: job.job_id || job.id,
+          title: job.title,
+          company: job.company_name || job.company || 'Unknown Company',
+          location: job.location || 'Remote',
+          type: job.job_type || job.type || 'Full-time',
+          salary: job.salary_range || job.salary || 'Competitive',
+          posted: formatDate(job.created_at) || 'Recently',
+          match: job.match_score || Math.floor(Math.random() * 20) + 75,
+          description: job.description || '',
+          requirements: job.requirements || job.skills || [],
+          isSaved: job.is_saved || false
+        }));
+        setJobs(mappedJobs);
+      } else if (result.error) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('Không thể tải danh sách việc làm. Vui lòng thử lại sau.');
+      console.error('Error fetching jobs:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const fetchSavedJobs = async () => {
+    try {
+      const result = await jobAPI.getSavedJobs();
+      if (result.jobs) {
+        const mappedJobs: Job[] = result.jobs.map((job: any) => ({
+          id: job.job_id || job.id,
+          title: job.title,
+          company: job.company_name || job.company || 'Unknown Company',
+          location: job.location || 'Remote',
+          type: job.job_type || job.type || 'Full-time',
+          salary: job.salary_range || job.salary || 'Competitive',
+          posted: formatDate(job.created_at) || 'Recently',
+          match: job.match_score || 80,
+          description: job.description || '',
+          requirements: job.requirements || job.skills || [],
+          isSaved: true
+        }));
+        setSavedJobs(mappedJobs);
+        setStats(prev => ({ ...prev, savedJobs: mappedJobs.length }));
+      }
+    } catch (err) {
+      console.error('Error fetching saved jobs:', err);
+    }
+  };
+
+  const fetchApplicationStats = async () => {
+    try {
+      const result = await jobAPI.getMyApplications();
+      if (result.applications) {
+        const apps = result.applications;
+        setStats(prev => ({
+          ...prev,
+          applied: apps.length,
+          inReview: apps.filter((a: any) => a.status === 'reviewing' || a.status === 'pending').length,
+          interviews: apps.filter((a: any) => a.status === 'interview').length
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching application stats:', err);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Recently';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  const handleSearch = () => {
+    fetchJobs(searchQuery, locationQuery);
+  };
+
+  const handleSaveJob = async (jobId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await jobAPI.saveJob(jobId);
+      // Toggle saved state locally
+      setJobs(prev => prev.map(job =>
+        job.id === jobId ? { ...job, isSaved: !job.isSaved } : job
+      ));
+      fetchSavedJobs(); // Refresh saved jobs
+    } catch (err) {
+      console.error('Error saving job:', err);
+    }
+  };
+
+  const handleApply = async (jobId: number) => {
+    setApplying(jobId);
+    try {
+      const result = await jobAPI.apply(jobId, null, '');
+      if (result.application_id || result.message) {
+        alert('Đã nộp đơn thành công!');
+        fetchApplicationStats();
+      } else if (result.error) {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('Có lỗi xảy ra khi nộp đơn. Vui lòng thử lại.');
+    } finally {
+      setApplying(null);
+    }
+  };
+
+  const displayJobs = activeTab === 'saved' ? savedJobs : jobs;
 
   const topCompanies = [
     { name: 'Google', openings: 45, rating: 4.8 },
@@ -133,10 +210,11 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
     { name: 'Apple', openings: 28, rating: 4.9 }
   ];
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation currentPage="jobs" onNavigate={onNavigate} onLogout={onLogout} />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-3xl mb-2 text-gray-900">Job Marketplace</h1>
@@ -187,11 +265,10 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
             </div>
 
             {jobs.map((job) => (
-              <Card 
-                key={job.id} 
-                className={`p-6 cursor-pointer transition-all ${
-                  selectedJob?.id === job.id ? 'border-blue-600 shadow-lg' : 'hover:border-gray-300'
-                }`}
+              <Card
+                key={job.id}
+                className={`p-6 cursor-pointer transition-all ${selectedJob?.id === job.id ? 'border-blue-600 shadow-lg' : 'hover:border-gray-300'
+                  }`}
                 onClick={() => setSelectedJob(job)}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -355,13 +432,13 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
             </Card>
 
             {/* Career Tips */}
-            <Card className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <Card className="p-6 bg-blue-600 text-white">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-5 h-5" />
                 <h3>Application Tip</h3>
               </div>
               <p className="text-sm opacity-90">
-                Tailor your CV for each application by matching keywords from the job description. 
+                Tailor your CV for each application by matching keywords from the job description.
                 This increases your chances by up to 60%!
               </p>
               <Button variant="secondary" size="sm" className="mt-4" onClick={() => onNavigate('cv-analyzer')}>

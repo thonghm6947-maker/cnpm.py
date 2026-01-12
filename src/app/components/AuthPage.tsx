@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Separator from '@radix-ui/react-separator';
-import { Eye, EyeOff, Loader2, Mail, Lock, ArrowLeft, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, ArrowLeft, User, Building2, Phone } from 'lucide-react';
+import type { UserRole } from '../App';
+import { authAPI } from '../../services/api';
 
-// --- Icon Google & GitHub (SVG custom) ---
+// --- Icon Google (SVG custom) ---
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
     <path
@@ -30,63 +32,136 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GitHubIcon = () => (
-  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-  </svg>
-);
-
 // --- Props Definition ---
 interface AuthPageProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (role: UserRole) => void;
   onBack: () => void;
 }
 
 export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
+  const [error, setError] = useState<string | null>(null);
 
   // Forms Hooks
   const { register: registerLogin, handleSubmit: handleLoginSubmit } = useForm();
   const { register: registerSignup, handleSubmit: handleSignupSubmit } = useForm();
 
-  // Handle Login Logic
+  // Handle Login Logic - Tích hợp API thực tế + Demo mode
   const onLogin = async (data: any) => {
     setIsLoading(true);
-    console.log('Login attempt:', data);
-    // TODO: Tích hợp API Login thực tế ở đây
-    setTimeout(() => {
+    setError(null);
+
+    // Demo login credentials (works without backend)
+    const demoAccounts: Record<string, UserRole> = {
+      'admin@demo.com': 'admin',
+      'admin@careermate.vn': 'admin',
+      'recruiter@demo.com': 'recruiter',
+      'user@demo.com': 'user',
+      'candidate@demo.com': 'user'
+    };
+
+    const emailLower = data.email.toLowerCase();
+
+    // Check for demo accounts first
+    if (demoAccounts[emailLower] && data.password === 'demo123') {
+      setTimeout(() => {
+        onLoginSuccess(demoAccounts[emailLower]);
+        setIsLoading(false);
+      }, 500);
+      return;
+    }
+
+    try {
+      const result = await authAPI.login(data.email, data.password);
+
+      if (result.access_token) {
+        // Lấy thông tin user để xác định role
+        const userInfo = await authAPI.getMe();
+        let role: UserRole = 'user';
+
+        if (userInfo.role === 'admin') {
+          role = 'admin';
+        } else if (userInfo.role === 'recruiter') {
+          role = 'recruiter';
+        }
+
+        onLoginSuccess(role);
+      } else {
+        setError(result.error || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      }
+    } catch (err) {
+      // If API fails, suggest demo accounts
+      setError('Lỗi kết nối server. Thử đăng nhập demo: admin@demo.com / demo123');
+      console.error('Login error:', err);
+    } finally {
       setIsLoading(false);
-      onLoginSuccess();
-    }, 1500);
+    }
   };
 
-  // Handle Signup Logic
+  // Handle Signup Logic - Tích hợp API thực tế
   const onSignup = async (data: any) => {
     setIsLoading(true);
-    console.log('Signup attempt:', data);
-    // TODO: Tích hợp API Signup thực tế ở đây
-    setTimeout(() => {
+    setError(null);
+
+    // Validate password confirmation
+    if (data.password !== data.password_confirm) {
+      setError('Mật khẩu xác nhận không khớp.');
       setIsLoading(false);
-      onLoginSuccess();
-    }, 1500);
+      return;
+    }
+
+    try {
+      const result = await authAPI.register({
+        email: data.email,
+        password: data.password,
+        password_confirm: data.password_confirm,
+        role: selectedRole === 'user' ? 'candidate' : selectedRole,
+        full_name: data.name,
+        phone: data.phone || ''
+      });
+
+      if (result.message?.includes('thành công') || result.user_id) {
+        // Tự động login sau khi đăng ký thành công
+        const loginResult = await authAPI.login(data.email, data.password);
+        if (loginResult.access_token) {
+          onLoginSuccess(selectedRole);
+        } else {
+          setError('Đăng ký thành công! Vui lòng đăng nhập.');
+        }
+      } else {
+        setError(result.error || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      setError('Lỗi kết nối server. Vui lòng thử lại sau.');
+      console.error('Signup error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const roleOptions = [
+    { value: 'user' as UserRole, label: 'Ứng viên', icon: User, description: 'Tìm kiếm việc làm phù hợp' },
+    { value: 'recruiter' as UserRole, label: 'Nhà tuyển dụng', icon: Building2, description: 'Đăng tin và tuyển dụng' },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 relative">
       {/* Nút Quay lại */}
-      <button 
+      <button
         onClick={onBack}
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
       >
-        <ArrowLeft className="w-4 h-4" /> Return to home page
+        <ArrowLeft className="w-4 h-4" /> Quay lại trang chủ
       </button>
 
-      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
+      <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Account</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Tài khoản</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Manage your CV and career
+            Quản lý CV và sự nghiệp của bạn
           </p>
         </div>
 
@@ -97,13 +172,13 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               value="login"
               className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm cursor-pointer hover:text-gray-700"
             >
-              Log in
+              Đăng nhập
             </Tabs.Trigger>
             <Tabs.Trigger
               value="signup"
               className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm cursor-pointer hover:text-gray-700"
             >
-              Sign up
+              Đăng ký
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -125,8 +200,8 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">Password</label>
-                  <a href="#" className="text-xs text-blue-600 hover:underline">Forgot password?</a>
+                  <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
+                  <a href="#" className="text-xs text-blue-600 hover:underline">Quên mật khẩu?</a>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -145,12 +220,19 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 </div>
               </div>
 
+              {/* Error message */}
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full rounded-lg bg-black py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Log in"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Đăng nhập"}
               </button>
             </form>
           </Tabs.Content>
@@ -158,14 +240,45 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
           {/* === SIGNUP FORM === */}
           <Tabs.Content value="signup" className="space-y-4 outline-none focus:outline-none">
             <form onSubmit={handleSignupSubmit(onSignup)} className="space-y-4">
+              {/* Role Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Full Name</label>
+                <label className="text-sm font-medium text-gray-700">Bạn là</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {roleOptions.map((role) => {
+                    const Icon = role.icon;
+                    const isSelected = selectedRole === role.value;
+                    return (
+                      <button
+                        key={role.value}
+                        type="button"
+                        onClick={() => setSelectedRole(role.value)}
+                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${isSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                      >
+                        <div className={`p-2 rounded-lg inline-flex mb-2 ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <p className={`font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                          {role.label}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">{role.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Họ và tên</label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     {...registerSignup('name', { required: true })}
                     type="text"
-                    placeholder="Trg"
+                    placeholder="Nguyễn Văn A"
                     className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none transition-all"
                   />
                 </div>
@@ -185,7 +298,20 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Password</label>
+                <label className="text-sm font-medium text-gray-700">Số điện thoại</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <input
+                    {...registerSignup('phone')}
+                    type="tel"
+                    placeholder="0912 345 678"
+                    className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
@@ -203,12 +329,38 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <input
+                    {...registerSignup('password_confirm', { required: true })}
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full rounded-lg bg-black py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create an account"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Tạo tài khoản"}
               </button>
             </form>
           </Tabs.Content>
@@ -220,29 +372,22 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
             <Separator.Root className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">Or continue with</span>
+            <span className="bg-white px-2 text-gray-500">Hoặc tiếp tục với</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex justify-center w-full">
           <button
             type="button"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer"
+            className="flex w-full max-w-xs items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
           >
             <GoogleIcon />
             Google
           </button>
-          <button
-            type="button"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer"
-          >
-            <GitHubIcon />
-            GitHub
-          </button>
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          By continuing, you agree to <a href="#" className="underline hover:text-gray-900">Article</a> và <a href="#" className="underline hover:text-gray-900">Privacy policy</a>.
+          Bằng việc tiếp tục, bạn đồng ý với <a href="#" className="underline hover:text-gray-900">Điều khoản</a> và <a href="#" className="underline hover:text-gray-900">Chính sách bảo mật</a>.
         </p>
       </div>
     </div>

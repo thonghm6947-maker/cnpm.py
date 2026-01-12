@@ -1,19 +1,35 @@
 import { useState } from 'react';
 import { LandingPage } from './components/LandingPage';
-import AuthPage from './components/AuthPage'; // Đã thêm import này
+import AuthPage from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { CVAnalyzer } from './components/CVAnalyzer';
 import { CareerCoach } from './components/CareerCoach';
 import { JobMarketplace } from './components/JobMarketplace';
 import { Profile } from './components/Profile';
 import { LearningHub } from './components/LearningHub';
+// Admin Components
+import { AdminDashboard } from './components/AdminDashboard';
+import { AdminUserManagement } from './components/AdminUserManagement';
+import { AdminSubscriptions } from './components/AdminSubscriptions';
+import { AdminJobReview } from './components/AdminJobReview';
+// Recruiter Components
+import { RecruiterDashboard } from './components/RecruiterDashboard';
+import { RecruiterJobManagement } from './components/RecruiterJobManagement';
+import { RecruiterCandidates } from './components/RecruiterCandidates';
+import { RecruiterProfile } from './components/RecruiterProfile';
 
-// Thêm 'auth' vào danh sách các trang
-export type Page = 'landing' | 'auth' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'jobs' | 'profile' | 'learning';
+// Extended Page types with Admin and Recruiter pages
+export type Page =
+  | 'landing' | 'auth' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'jobs' | 'profile' | 'learning'
+  | 'admin-dashboard' | 'admin-users' | 'admin-subscriptions' | 'admin-jobs'
+  | 'recruiter-dashboard' | 'recruiter-jobs' | 'recruiter-candidates' | 'recruiter-profile';
+
+export type UserRole = 'user' | 'admin' | 'recruiter';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>('user');
 
   // Được gọi khi nhấn nút "Bắt đầu" hoặc "Login" ở Landing Page
   const handleStartLogin = () => {
@@ -21,18 +37,31 @@ export default function App() {
   };
 
   // Được gọi khi AuthPage xác thực thành công (Login/Signup xong)
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (role: UserRole = 'user') => {
     setIsLoggedIn(true);
-    setCurrentPage('dashboard');
+    setUserRole(role);
+
+    // Redirect based on role
+    switch (role) {
+      case 'admin':
+        setCurrentPage('admin-dashboard');
+        break;
+      case 'recruiter':
+        setCurrentPage('recruiter-dashboard');
+        break;
+      default:
+        setCurrentPage('dashboard');
+    }
   };
 
   // Xử lý đăng xuất
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserRole('user');
     setCurrentPage('landing');
   };
 
-  // Điều hướng nội bộ trong Dashboard
+  // Điều hướng nội bộ
   const navigateTo = (page: Page) => {
     setCurrentPage(page);
   };
@@ -44,19 +73,60 @@ export default function App() {
     // Nếu đang ở trang Auth -> hiển thị AuthPage
     if (currentPage === 'auth') {
       return (
-        <AuthPage 
+        <AuthPage
           onLoginSuccess={handleLoginSuccess}
           onBack={() => setCurrentPage('landing')}
         />
       );
     }
-    
+
     // Mặc định hiển thị Landing Page
-    // Lưu ý: prop `onLogin` của LandingPage giờ sẽ dẫn tới trang Auth
     return <LandingPage onLogin={handleStartLogin} />;
   }
 
-  // 2. Nếu đã đăng nhập (Hiển thị các trang chức năng)
+  // 2. Nếu đã đăng nhập - Hiển thị theo role
+
+  // Admin Pages
+  if (userRole === 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {currentPage === 'admin-dashboard' && (
+          <AdminDashboard onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'admin-users' && (
+          <AdminUserManagement onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'admin-subscriptions' && (
+          <AdminSubscriptions onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'admin-jobs' && (
+          <AdminJobReview onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+      </div>
+    );
+  }
+
+  // Recruiter Pages
+  if (userRole === 'recruiter') {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {currentPage === 'recruiter-dashboard' && (
+          <RecruiterDashboard onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'recruiter-jobs' && (
+          <RecruiterJobManagement onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'recruiter-candidates' && (
+          <RecruiterCandidates onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+        {currentPage === 'recruiter-profile' && (
+          <RecruiterProfile onNavigate={navigateTo} onLogout={handleLogout} />
+        )}
+      </div>
+    );
+  }
+
+  // User Pages (default)
   return (
     <div className="min-h-screen bg-gray-50">
       {currentPage === 'dashboard' && (

@@ -67,27 +67,27 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" defaultValue="Alex" />
+                        <Input id="firstName" defaultValue="ng van" />
                       </div>
                       <div>
                         <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" defaultValue="Thompson" />
+                        <Input id="lastName" defaultValue="A" />
                       </div>
                     </div>
 
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="alex.thompson@email.com" />
+                      <Input id="email" type="email" defaultValue="ngvana@email.com" />
                     </div>
 
                     <div>
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
+                      <Input id="phone" type="tel" defaultValue="+84 123 456 983" />
                     </div>
 
                     <div>
                       <Label htmlFor="location">Location</Label>
-                      <Input id="location" defaultValue="San Francisco, CA" />
+                      <Input id="location" defaultValue="Go Vap, tphcm" />
                     </div>
 
                     <div>
@@ -298,7 +298,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               </TabsContent>
 
               <TabsContent value="premium" className="mt-6">
-                <Card className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white mb-6">
+                <Card className="p-6 bg-blue-600 text-white mb-6">
                   <h2 className="text-2xl mb-2">Upgrade to Premium</h2>
                   <p className="opacity-90">Unlock advanced AI features and accelerate your career growth</p>
                 </Card>
@@ -379,10 +379,10 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
           <div className="space-y-6">
             {/* Profile Card */}
             <Card className="p-6 text-center">
-              <div className="w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <User className="w-12 h-12 text-white" />
               </div>
-              <h3 className="text-xl mb-1">Alex Thompson</h3>
+              <h3 className="text-xl mb-1">ng van a</h3>
               <p className="text-sm text-gray-600 mb-3">Frontend Developer</p>
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Badge>Free Plan</Badge>
@@ -420,15 +420,15 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-400" />
-                  <span>alex.thompson@email.com</span>
+                  <span>ngvana@email.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-400" />
-                  <span>+1 (555) 123-4567</span>
+                  <span>+84 123 456 983</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-gray-400" />
-                  <span>San Francisco, CA</span>
+                  <span>Go Vap, tphcm</span>
                 </div>
               </div>
             </Card>
