@@ -232,30 +232,8 @@ export function RecruiterProfile({ onNavigate, onLogout }: RecruiterProfileProps
                             <p className="opacity-90">Mở khóa tính năng cao cấp để tuyển dụng hiệu quả hơn</p>
                         </Card>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 max-w-3xl mx-auto">
-                            <Card className="p-6 border-0 shadow-lg">
-                                <div className="mb-6">
-                                    <h3 className="text-xl font-bold mb-2">Free</h3>
-                                    <div className="text-3xl font-bold mb-1">0 VNĐ</div>
-                                    <p className="text-sm text-slate-500">Miễn phí mãi mãi</p>
-                                </div>
-                                <ul className="space-y-3 mb-6">
-                                    {[
-                                        'Đăng 3 tin tuyển dụng/tháng',
-                                        'Xem 20 hồ sơ ứng viên/tháng',
-                                        'Lọc ứng viên cơ bản',
-                                        'Hỗ trợ qua email'
-                                    ].map((feature, index) => (
-                                        <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
-                                            <div className="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
-                                            {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-                                <Badge variant="outline" className="w-full justify-center">Gói hiện tại</Badge>
-                            </Card>
-
-                            <Card className="p-6 border-2 border-blue-600 relative shadow-lg">
+                        <div className="flex justify-center mb-6">
+                            <Card className="p-6 border-2 border-blue-600 relative shadow-lg max-w-md w-full">
                                 <Badge className="absolute top-4 right-4 bg-blue-600">Phổ biến</Badge>
                                 <div className="mb-6">
                                     <h3 className="text-xl font-bold mb-2">Premium</h3>

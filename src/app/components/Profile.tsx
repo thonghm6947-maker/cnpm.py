@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -6,11 +7,11 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
   Briefcase,
   GraduationCap,
   Award,
@@ -22,25 +23,146 @@ import {
   Edit,
   Linkedin,
   Github,
-  Globe
+  Globe,
+  Loader2,
+  Save,
+  AlertCircle
 } from 'lucide-react';
 import type { Page } from '../App';
+import { profileAPI, authAPI } from '../../services/api';
 
 interface ProfileProps {
   onNavigate: (page: Page) => void;
   onLogout: () => void;
 }
 
+interface ProfileData {
+  full_name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  avatar_url: string;
+}
+
 export function Profile({ onNavigate, onLogout }: ProfileProps) {
+  const [profile, setProfile] = useState<ProfileData>({
+    full_name: '',
+    email: '',
+    phone: '',
+    bio: '',
+    avatar_url: ''
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Load profile on mount
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Get profile data and user info (for email)
+      const [profileResponse, userResponse] = await Promise.all([
+        profileAPI.getCandidate(),
+        authAPI.getMe()
+      ]);
+
+      console.log('Profile API Response:', profileResponse);
+      console.log('User API Response:', userResponse);
+
+      if (profileResponse && !profileResponse.error) {
+        setProfile({
+          full_name: profileResponse.full_name || '',
+          email: userResponse?.email || '', // Email comes from /api/auth/me
+          phone: profileResponse.phone || '',
+          bio: profileResponse.bio || '',
+          avatar_url: profileResponse.avatar_url || ''
+        });
+      } else {
+        setError(profileResponse.error || 'Failed to load profile');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Load profile error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await profileAPI.updateCandidate({
+        full_name: profile.full_name,
+        phone: profile.phone,
+        bio: profile.bio,
+        avatar_url: profile.avatar_url
+      });
+      if (response && !response.error) {
+        setSuccess('Profile updated successfully!');
+        setIsEditing(false);
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(response.error || 'Failed to update profile');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Save profile error:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof ProfileData, value: string) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation currentPage="profile" onNavigate={onNavigate} onLogout={onLogout} />
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation currentPage="profile" onNavigate={onNavigate} onLogout={onLogout} />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl mb-2 text-gray-900">Profile</h1>
           <p className="text-gray-600">Manage your account and preferences</p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto hover:text-red-900">×</button>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm">
+            <Save className="w-4 h-4" />
+            <span>{success}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
@@ -57,51 +179,81 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                 <Card className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl">Personal Information</h2>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setIsEditing(!isEditing)}
+                    >
                       <Edit className="w-4 h-4" />
-                      Edit
+                      {isEditing ? 'Cancel' : 'Edit'}
                     </Button>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" defaultValue="ng van" />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" defaultValue="A" />
-                      </div>
+                    <div>
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        value={profile.full_name}
+                        onChange={(e) => handleInputChange('full_name', e.target.value)}
+                        disabled={!isEditing}
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="ngvana@email.com" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profile.email}
+                        disabled={true}
+                        className="bg-gray-100"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                     </div>
 
                     <div>
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" defaultValue="+84 123 456 983" />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="location">Location</Label>
-                      <Input id="location" defaultValue="Go Vap, tphcm" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={profile.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="Enter your phone number"
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="bio">Professional Summary</Label>
                       <textarea
                         id="bio"
-                        className="w-full min-h-24 px-3 py-2 border border-gray-300 rounded-md"
-                        defaultValue="Recent Computer Science graduate with a passion for frontend development. Experienced in React, TypeScript, and modern web technologies. Looking for entry-level positions to kickstart my career."
+                        className="w-full min-h-24 px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100"
+                        value={profile.bio}
+                        onChange={(e) => handleInputChange('bio', e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="Tell us about yourself and your career goals..."
                       />
                     </div>
 
-                    <div className="pt-4">
-                      <Button>Save Changes</Button>
-                    </div>
+                    {isEditing && (
+                      <div className="pt-4">
+                        <Button onClick={handleSaveProfile} disabled={isSaving} className="gap-2">
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </Card>
 
@@ -172,7 +324,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                       </div>
                       <p className="text-sm text-gray-500 mb-2">Jun 2023 - Dec 2023 • 6 months</p>
                       <p className="text-sm text-gray-600">
-                        Developed responsive web applications using React and TypeScript. 
+                        Developed responsive web applications using React and TypeScript.
                         Collaborated with design team to implement UI/UX improvements.
                       </p>
                     </div>
@@ -237,7 +389,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               <TabsContent value="settings" className="mt-6">
                 <Card className="p-6">
                   <h2 className="text-xl mb-6">Account Settings</h2>
-                  
+
                   <div className="space-y-6">
                     <div>
                       <h3 className="mb-4 flex items-center gap-2">
@@ -382,8 +534,8 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <User className="w-12 h-12 text-white" />
               </div>
-              <h3 className="text-xl mb-1">ng van a</h3>
-              <p className="text-sm text-gray-600 mb-3">Frontend Developer</p>
+              <h3 className="text-xl mb-1">{profile.full_name || 'Your Name'}</h3>
+              <p className="text-sm text-gray-600 mb-3">Candidate</p>
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Badge>Free Plan</Badge>
                 <Badge variant="outline">Level 5</Badge>
@@ -420,15 +572,11 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-400" />
-                  <span>ngvana@email.com</span>
+                  <span>{profile.email || 'Not set'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-400" />
-                  <span>+84 123 456 983</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <span>Go Vap, tphcm</span>
+                  <span>{profile.phone || 'Not set'}</span>
                 </div>
               </div>
             </Card>

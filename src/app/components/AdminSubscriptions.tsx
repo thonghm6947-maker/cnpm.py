@@ -25,15 +25,11 @@ const revenueHistory = [
 
 const subscriptionDistribution = [
   { name: 'Free', value: 1500, color: '#94a3b8' },
-  { name: 'Basic', value: 800, color: '#3b82f6' },
   { name: 'Premium', value: 400, color: '#8b5cf6' },
-  { name: 'Enterprise', value: 147, color: '#f59e0b' },
 ];
 
 const initialPlans = [
-  { id: 1, name: 'Basic', price: 99000, duration: 30, features: ['CV Analyzer cơ bản', 'Tìm kiếm việc làm', '10 lượt apply/tháng'], icon: Zap, color: 'from-blue-500 to-blue-600', subscribers: 800 },
-  { id: 2, name: 'Premium', price: 199000, duration: 30, features: ['CV Analyzer nâng cao', 'Career Coach AI', 'Unlimited apply', 'Priority support'], icon: Crown, color: 'from-violet-500 to-purple-600', subscribers: 400 },
-  { id: 3, name: 'Enterprise', price: 499000, duration: 30, features: ['Tất cả tính năng Premium', 'API Access', 'Dedicated support'], icon: Star, color: 'from-amber-500 to-orange-500', subscribers: 147 },
+  { id: 1, name: 'Premium', price: 199000, duration: 30, features: ['CV Analyzer nâng cao', 'Career Coach AI', 'Unlimited apply', 'Priority support'], icon: Crown, color: 'from-violet-500 to-purple-600', subscribers: 400 },
 ];
 
 export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsProps) {

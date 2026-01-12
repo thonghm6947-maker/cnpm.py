@@ -1,5 +1,5 @@
 import { Button } from './ui/button';
-import { Sparkles, LayoutDashboard, FileText, MessageSquare, Briefcase, BookOpen, User, LogOut } from 'lucide-react';
+import { Sparkles, LayoutDashboard, FileText, MessageSquare, Map, Briefcase, BookOpen, User, LogOut } from 'lucide-react';
 import type { Page } from '../App';
 
 interface NavigationProps {
@@ -13,6 +13,7 @@ export function Navigation({ currentPage, onNavigate, onLogout }: NavigationProp
     { id: 'dashboard' as Page, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'cv-analyzer' as Page, label: 'CV Analyzer', icon: FileText },
     { id: 'career-coach' as Page, label: 'Career Coach', icon: MessageSquare },
+    { id: 'career-roadmap' as Page, label: 'Roadmap', icon: Map },
     { id: 'jobs' as Page, label: 'Jobs', icon: Briefcase },
     { id: 'learning' as Page, label: 'Learning', icon: BookOpen },
     { id: 'profile' as Page, label: 'Profile', icon: User },

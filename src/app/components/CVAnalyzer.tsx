@@ -5,93 +5,236 @@ import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
+import { Textarea } from './ui/textarea';
+import { Input } from './ui/input';
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
   TrendingUp,
   Download,
   Sparkles,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import type { Page } from '../App';
+import { aiAPI } from '../../services/api';
 
 interface CVAnalyzerProps {
   onNavigate: (page: Page) => void;
   onLogout: () => void;
 }
 
-export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [hasAnalysis, setHasAnalysis] = useState(false);
+interface AnalysisResult {
+  skills: string[];
+  experience_years: number;
+  education: string[];
+  strengths: string[];
+  weaknesses: string[];
+  match_score: number;
+  recommendations: string[];
+}
 
-  const handleFileUpload = () => {
+interface ImprovementResult {
+  target_role: string;
+  suggestions: string;
+}
+
+export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
+  const [cvText, setCvText] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [targetRole, setTargetRole] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [improvementResult, setImprovementResult] = useState<ImprovementResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAnalyzeCV = async () => {
+    if (!cvText.trim()) {
+      setError('Please enter your CV content');
+      return;
+    }
+
     setIsAnalyzing(true);
-    // Simulate AI analysis
-    setTimeout(() => {
+    setError(null);
+    setAnalysisResult(null);
+    setImprovementResult(null);
+
+    try {
+      const response = await aiAPI.analyzeCV(
+        cvText,
+        jobDescription || null,
+        targetRole || null
+      );
+
+      if (response.success) {
+        setAnalysisResult(response.data);
+      } else {
+        setError(response.message || 'Failed to analyze CV');
+      }
+    } catch (err) {
+      setError('Network error. Please check your connection and try again.');
+      console.error('CV Analysis error:', err);
+    } finally {
       setIsAnalyzing(false);
-      setHasAnalysis(true);
-    }, 2500);
+    }
+  };
+
+  const handleImproveCV = async () => {
+    if (!cvText.trim()) {
+      setError('Please enter your CV content first');
+      return;
+    }
+    if (!targetRole.trim()) {
+      setError('Please specify a target role for improvement suggestions');
+      return;
+    }
+
+    setIsImproving(true);
+    setError(null);
+
+    try {
+      const response = await aiAPI.improveCV(cvText, targetRole);
+
+      if (response.success) {
+        setImprovementResult(response.data);
+      } else {
+        setError(response.message || 'Failed to get improvement suggestions');
+      }
+    } catch (err) {
+      setError('Network error. Please check your connection and try again.');
+      console.error('CV Improvement error:', err);
+    } finally {
+      setIsImproving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setCvText('');
+    setJobDescription('');
+    setTargetRole('');
+    setAnalysisResult(null);
+    setImprovementResult(null);
+    setError(null);
+  };
+
+  const calculateOverallScore = () => {
+    if (!analysisResult) return 0;
+    return analysisResult.match_score || 75;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation currentPage="cv-analyzer" onNavigate={onNavigate} onLogout={onLogout} />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl mb-2 text-gray-900">AI CV Analyzer</h1>
-          <p className="text-gray-600">Upload your CV and get instant AI-powered feedback</p>
+          <h1 className="text-3xl mb-2 text-gray-900 font-bold">AI CV Analyzer</h1>
+          <p className="text-gray-600">Paste your CV and get instant AI-powered feedback</p>
         </div>
 
-        {!hasAnalysis ? (
-          <div className="max-w-2xl mx-auto">
-            <Card className="p-12">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Upload className="w-10 h-10 text-blue-600" />
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto text-red-500 hover:text-red-700">×</button>
+          </div>
+        )}
+
+        {!analysisResult ? (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* CV Input Section */}
+            <Card className="p-6">
+              <h2 className="text-xl mb-4 font-semibold flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Your CV Content
+              </h2>
+              <Textarea
+                placeholder="Paste your CV content here... (e.g., your resume text, skills, experience, education)"
+                value={cvText}
+                onChange={(e) => setCvText(e.target.value)}
+                className="min-h-[250px] mb-4"
+              />
+              <p className="text-sm text-gray-500">
+                {cvText.length} characters • Tip: Include your skills, experience, and education for best results
+              </p>
+            </Card>
+
+            {/* Optional Fields */}
+            <Card className="p-6">
+              <h2 className="text-xl mb-4 font-semibold">Optional: Target Matching</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Target Role</label>
+                  <Input
+                    placeholder="e.g., Senior Frontend Developer"
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value)}
+                  />
                 </div>
-                <h2 className="text-2xl mb-4">Upload Your CV</h2>
-                <p className="text-gray-600 mb-8">
-                  Support for PDF, DOCX formats. Maximum file size: 5MB
-                </p>
-                
-                {isAnalyzing ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-center gap-2 text-blue-600">
-                      <Sparkles className="w-5 h-5 animate-pulse" />
-                      <span>Analyzing your CV with AI...</span>
-                    </div>
-                    <Progress value={66} className="h-2" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Button size="lg" className="gap-2" onClick={handleFileUpload}>
-                      <Upload className="w-5 h-5" />
-                      Choose File to Upload
-                    </Button>
-                    <p className="text-sm text-gray-500">or drag and drop your file here</p>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Job Description (Optional)</label>
+                  <Textarea
+                    placeholder="Paste job description for matching analysis..."
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
               </div>
             </Card>
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <Button
+                size="lg"
+                className="gap-2 px-8"
+                onClick={handleAnalyzeCV}
+                disabled={isAnalyzing || !cvText.trim()}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Analyzing with AI...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Analyze My CV
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {isAnalyzing && (
+              <Card className="p-6 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <Sparkles className="w-10 h-10 text-blue-600 animate-pulse" />
+                  <p className="text-gray-600">AI is analyzing your CV...</p>
+                  <Progress value={66} className="h-2 w-48" />
+                  <p className="text-sm text-gray-500">This may take a few seconds</p>
+                </div>
+              </Card>
+            )}
+
+            {/* Feature Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="p-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600 mb-2" />
-                <h3 className="mb-1">Instant Analysis</h3>
+                <h3 className="font-semibold mb-1">Instant Analysis</h3>
                 <p className="text-sm text-gray-600">Get results in under 5 seconds</p>
               </Card>
               <Card className="p-4">
                 <Sparkles className="w-8 h-8 text-blue-600 mb-2" />
-                <h3 className="mb-1">AI-Powered</h3>
-                <p className="text-sm text-gray-600">Advanced ML algorithms</p>
+                <h3 className="font-semibold mb-1">AI-Powered</h3>
+                <p className="text-sm text-gray-600">Powered by Google Gemini</p>
               </Card>
               <Card className="p-4">
                 <Target className="w-8 h-8 text-purple-600 mb-2" />
-                <h3 className="mb-1">Actionable Tips</h3>
+                <h3 className="font-semibold mb-1">Actionable Tips</h3>
                 <p className="text-sm text-gray-600">Personalized improvements</p>
               </Card>
             </div>
@@ -102,11 +245,17 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
             <Card className="p-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl mb-2">Overall CV Score</h2>
-                  <p className="opacity-90">Your CV is performing well with room for improvement</p>
+                  <h2 className="text-2xl mb-2 font-bold">Overall CV Score</h2>
+                  <p className="opacity-90">
+                    {calculateOverallScore() >= 80
+                      ? 'Your CV is performing excellently!'
+                      : calculateOverallScore() >= 60
+                        ? 'Your CV is performing well with room for improvement'
+                        : 'Your CV needs some improvements to stand out'}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <div className="text-6xl mb-2">78</div>
+                  <div className="text-6xl font-bold mb-2">{calculateOverallScore()}</div>
                   <div className="text-lg opacity-90">out of 100</div>
                 </div>
               </div>
@@ -124,72 +273,32 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
               <TabsContent value="overview" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="p-6">
-                    <h3 className="text-xl mb-4">Score Breakdown</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span>Content Quality</span>
-                          <span className="text-green-600">85/100</span>
-                        </div>
-                        <Progress value={85} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span>Formatting & Structure</span>
-                          <span className="text-blue-600">90/100</span>
-                        </div>
-                        <Progress value={90} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span>Keywords & ATS Optimization</span>
-                          <span className="text-yellow-600">65/100</span>
-                        </div>
-                        <Progress value={65} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span>Experience & Achievements</span>
-                          <span className="text-green-600">80/100</span>
-                        </div>
-                        <Progress value={80} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span>Skills Relevance</span>
-                          <span className="text-orange-600">70/100</span>
-                        </div>
-                        <Progress value={70} className="h-2" />
-                      </div>
+                    <h3 className="text-xl mb-4 font-semibold">Skills Detected</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {(analysisResult.skills || []).map((skill, index) => (
+                        <Badge key={index} variant="secondary" className="px-3 py-1">
+                          {skill}
+                        </Badge>
+                      ))}
                     </div>
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-xl mb-4">Quick Stats</h3>
-                    <div className="space-y-4">
+                    <h3 className="text-xl mb-4 font-semibold">Quick Stats</h3>
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Total Words</span>
-                        <span className="font-medium">450</span>
+                        <span className="text-gray-600">Experience</span>
+                        <span className="font-medium">{analysisResult.experience_years} years</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Action Verbs Used</span>
-                        <span className="font-medium">18</span>
+                        <span className="text-gray-600">Skills Identified</span>
+                        <span className="font-medium">{(analysisResult.skills || []).length}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Technical Skills Listed</span>
-                        <span className="font-medium">12</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Years of Experience</span>
-                        <span className="font-medium">1.5</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Education Level</span>
-                        <span className="font-medium">Bachelor's</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">ATS Compatibility</span>
-                        <Badge variant="secondary">Good</Badge>
+                        <span className="text-gray-600">Match Score</span>
+                        <Badge variant={analysisResult.match_score >= 70 ? "default" : "secondary"}>
+                          {analysisResult.match_score}%
+                        </Badge>
                       </div>
                     </div>
                   </Card>
@@ -198,36 +307,12 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
 
               <TabsContent value="strengths" className="mt-6">
                 <Card className="p-6">
-                  <h3 className="text-xl mb-4">What You're Doing Well</h3>
+                  <h3 className="text-xl mb-4 font-semibold">What You're Doing Well</h3>
                   <div className="space-y-4">
-                    {[
-                      {
-                        title: 'Clear Professional Summary',
-                        description: 'Your professional summary is concise and effectively highlights your key strengths and career objectives.'
-                      },
-                      {
-                        title: 'Quantified Achievements',
-                        description: 'You\'ve included measurable results in your experience section, which demonstrates impact.'
-                      },
-                      {
-                        title: 'Clean Formatting',
-                        description: 'Your CV has excellent formatting with consistent fonts, spacing, and section organization.'
-                      },
-                      {
-                        title: 'Relevant Skills Section',
-                        description: 'Your skills section includes industry-relevant technical skills that match job requirements.'
-                      },
-                      {
-                        title: 'Recent Projects',
-                        description: 'Including recent projects demonstrates practical application of your skills.'
-                      }
-                    ].map((strength, index) => (
+                    {(analysisResult.strengths || []).map((strength, index) => (
                       <div key={index} className="flex gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="mb-1 text-green-900">{strength.title}</h4>
-                          <p className="text-sm text-green-700">{strength.description}</p>
-                        </div>
+                        <p className="text-green-800">{strength}</p>
                       </div>
                     ))}
                   </div>
@@ -236,54 +321,43 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
 
               <TabsContent value="improvements" className="mt-6">
                 <Card className="p-6">
-                  <h3 className="text-xl mb-4">Areas for Improvement</h3>
+                  <h3 className="text-xl mb-4 font-semibold">Areas for Improvement</h3>
                   <div className="space-y-4">
-                    {[
-                      {
-                        priority: 'High',
-                        title: 'Add More Keywords',
-                        description: 'Include more industry-specific keywords to improve ATS compatibility. Keywords like "React", "TypeScript", "Agile" are missing.',
-                        impact: '+8 points'
-                      },
-                      {
-                        priority: 'High',
-                        title: 'Expand Technical Skills',
-                        description: 'Add specific tools and technologies you\'ve used (e.g., Git, Docker, CI/CD) to match job descriptions.',
-                        impact: '+6 points'
-                      },
-                      {
-                        priority: 'Medium',
-                        title: 'Add Certifications',
-                        description: 'Include any relevant certifications or online courses you\'ve completed to strengthen your profile.',
-                        impact: '+4 points'
-                      },
-                      {
-                        priority: 'Medium',
-                        title: 'Improve Action Verbs',
-                        description: 'Use stronger action verbs like "architected", "spearheaded", "optimized" instead of basic verbs.',
-                        impact: '+3 points'
-                      },
-                      {
-                        priority: 'Low',
-                        title: 'Add LinkedIn Profile',
-                        description: 'Include a link to your LinkedIn profile to provide recruiters with more information.',
-                        impact: '+2 points'
-                      }
-                    ].map((improvement, index) => (
+                    {(analysisResult.weaknesses || []).map((weakness, index) => (
                       <div key={index} className="flex gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                         <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-orange-900">{improvement.title}</h4>
-                            <Badge variant={improvement.priority === 'High' ? 'destructive' : 'secondary'}>
-                              {improvement.priority} Priority
-                            </Badge>
-                            <Badge variant="outline">{improvement.impact}</Badge>
-                          </div>
-                          <p className="text-sm text-orange-700">{improvement.description}</p>
-                        </div>
+                        <p className="text-orange-800">{weakness}</p>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Improve CV Section */}
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-2">Get Improvement Suggestions</h4>
+                    <div className="flex gap-3">
+                      <Input
+                        placeholder="Target role for improvements..."
+                        value={targetRole}
+                        onChange={(e) => setTargetRole(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleImproveCV}
+                        disabled={isImproving || !targetRole.trim()}
+                      >
+                        {isImproving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Get Suggestions'
+                        )}
+                      </Button>
+                    </div>
+                    {improvementResult && (
+                      <div className="mt-4 p-3 bg-white rounded-lg">
+                        <h5 className="font-medium mb-2">Suggestions for {improvementResult.target_role}:</h5>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{improvementResult.suggestions}</p>
+                      </div>
+                    )}
                   </div>
                 </Card>
               </TabsContent>
@@ -291,92 +365,57 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
               <TabsContent value="recommendations" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="p-6">
-                    <h3 className="text-xl mb-4">AI Recommendations</h3>
+                    <h3 className="text-xl mb-4 font-semibold">AI Recommendations</h3>
                     <div className="space-y-4">
-                      {[
-                        {
-                          title: 'Optimize for Frontend Developer Roles',
-                          description: 'Based on your experience, focus on highlighting React, JavaScript, and UI/UX skills.',
-                          action: 'View Optimized CV'
-                        },
-                        {
-                          title: 'Add Portfolio Link',
-                          description: 'Include a link to your portfolio or GitHub to showcase your projects.',
-                          action: 'Update CV'
-                        },
-                        {
-                          title: 'Tailor for Each Application',
-                          description: 'Customize your CV for each job by matching keywords from the job description.',
-                          action: 'Learn How'
-                        }
-                      ].map((rec, index) => (
+                      {(analysisResult.recommendations || []).map((rec, index) => (
                         <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                          <div className="flex items-start gap-2 mb-2">
+                          <div className="flex items-start gap-2">
                             <Sparkles className="w-4 h-4 text-blue-600 mt-0.5" />
-                            <h4>{rec.title}</h4>
+                            <p className="text-gray-700">{rec}</p>
                           </div>
-                          <p className="text-sm text-gray-600 mb-3">{rec.description}</p>
-                          <Button variant="outline" size="sm">{rec.action}</Button>
                         </div>
                       ))}
                     </div>
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-xl mb-4">Suggested Actions</h3>
+                    <h3 className="text-xl mb-4 font-semibold">Suggested Actions</h3>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-600 cursor-pointer transition-colors">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <div className="flex-1">
-                          <h4 className="text-sm">Download Improved CV</h4>
-                          <p className="text-xs text-gray-500">Get AI-optimized version</p>
-                        </div>
-                        <Download className="w-4 h-4 text-gray-400" />
-                      </div>
-                      
-                      <div 
+                      <div
                         className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-600 cursor-pointer transition-colors"
                         onClick={() => onNavigate('career-coach')}
                       >
                         <Sparkles className="w-5 h-5 text-purple-600" />
                         <div className="flex-1">
-                          <h4 className="text-sm">Get Career Coaching</h4>
+                          <h4 className="text-sm font-medium">Get Career Coaching</h4>
                           <p className="text-xs text-gray-500">Discuss with AI coach</p>
                         </div>
                         <TrendingUp className="w-4 h-4 text-gray-400" />
                       </div>
-                      
-                      <div 
+
+                      <div
                         className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-600 cursor-pointer transition-colors"
                         onClick={() => onNavigate('jobs')}
                       >
                         <Target className="w-5 h-5 text-green-600" />
                         <div className="flex-1">
-                          <h4 className="text-sm">Find Matching Jobs</h4>
+                          <h4 className="text-sm font-medium">Find Matching Jobs</h4>
                           <p className="text-xs text-gray-500">Based on your profile</p>
                         </div>
                         <CheckCircle2 className="w-4 h-4 text-gray-400" />
                       </div>
-                      
-                      <div 
+
+                      <div
                         className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-600 cursor-pointer transition-colors"
                         onClick={() => onNavigate('learning')}
                       >
                         <AlertCircle className="w-5 h-5 text-orange-600" />
                         <div className="flex-1">
-                          <h4 className="text-sm">Learn Missing Skills</h4>
+                          <h4 className="text-sm font-medium">Learn Missing Skills</h4>
                           <p className="text-xs text-gray-500">Close skill gaps</p>
                         </div>
                         <TrendingUp className="w-4 h-4 text-gray-400" />
                       </div>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h4 className="mb-2 text-blue-900">💡 Pro Tip</h4>
-                      <p className="text-sm text-blue-700">
-                        Update your CV every month to reflect new skills and projects. 
-                        This keeps it fresh and relevant for recruiters.
-                      </p>
                     </div>
                   </Card>
                 </div>
@@ -385,7 +424,7 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
-              <Button variant="outline" onClick={() => setHasAnalysis(false)}>
+              <Button variant="outline" onClick={handleReset}>
                 Analyze Another CV
               </Button>
               <Button className="gap-2">

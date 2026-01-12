@@ -1,16 +1,54 @@
 // src/services/api.js
 const API_BASE = 'http://localhost:9999';
 
-// Token management
-export const setToken = (token) => localStorage.setItem('access_token', token);
-export const getToken = () => localStorage.getItem('access_token');
-export const removeToken = () => localStorage.removeItem('access_token');
+// Auth helpers
+let inMemoryToken = null;
+
+export const setToken = (token) => {
+    inMemoryToken = token;
+    localStorage.setItem('access_token', token);
+};
+
+export const getToken = () => {
+    const t = inMemoryToken || localStorage.getItem('access_token');
+    return t ? t.trim() : null;
+};
+
+export const removeToken = () => {
+    inMemoryToken = null;
+    localStorage.removeItem('access_token');
+};
 
 // Helper for authenticated requests
-const authHeaders = () => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${getToken()}`
-});
+const authHeaders = () => {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+    console.log('Sending Auth Header:', headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'MISSING');
+    return headers;
+};
+
+const handleResponse = async (res) => {
+    if (res.status === 401) {
+        const token = getToken();
+        const hasToken = !!token;
+        // Keep a discreet log for troubleshooting
+        console.error(`API 401 Unauthorized. Token present: ${hasToken}`);
+
+        removeToken();
+
+        // Auto-redirect to login/landing on 401
+        window.location.href = '/';
+
+        return {
+            success: false,
+            message: 'Session expired or invalid. Please login again.'
+        };
+    }
+    return res.json();
+};
 
 // ============ Auth API ============
 export const authAPI = {
@@ -29,8 +67,17 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-        const data = await res.json();
-        if (data.access_token) setToken(data.access_token);
+
+        // Handle potential double-encoded JSON
+        let data = await res.json();
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) { }
+        }
+
+        // Support both access_token (standard) and token (alternative) keys
+        const token = data.access_token || data.token;
+        if (token) setToken(token);
+
         return data;
     },
 
@@ -266,5 +313,123 @@ export const adminAPI = {
             headers: authHeaders()
         });
         return res.json();
+    }
+};
+
+// ============ AI API ============
+export const aiAPI = {
+    // Health check (no auth required)
+    health: async () => {
+        const res = await fetch(`${API_BASE}/api/ai/health`);
+        return res.json();
+    },
+
+    // CV Analyzer
+    /**
+     * @param {string} cv_text 
+     * @param {string|null} [job_description] 
+     * @param {string|null} [target_role] 
+     */
+    analyzeCV: async (cv_text, job_description = null, target_role = null) => {
+        const body = { cv_text };
+        if (job_description) body.job_description = job_description;
+        if (target_role) body.target_role = target_role;
+
+        const res = await fetch(`${API_BASE}/api/ai/cv-analyze`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+        });
+        return handleResponse(res);
+    },
+
+    /**
+     * @param {string} cv_text 
+     * @param {string} target_role 
+     */
+    improveCV: async (cv_text, target_role) => {
+        const res = await fetch(`${API_BASE}/api/ai/cv-improve`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ cv_text, target_role })
+        });
+        return handleResponse(res);
+    },
+
+    // Career Coach
+    /**
+     * @param {string} message 
+     * @param {number|null} [session_id] 
+     * @param {string|null} [topic] 
+     */
+    sendMessage: async (message, session_id = null, topic = null) => {
+        const body = { message };
+        if (session_id) body.session_id = session_id;
+        if (topic) body.topic = topic;
+
+        const res = await fetch(`${API_BASE}/api/ai/career-coach`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+        });
+        return handleResponse(res);
+    },
+
+    getChatSessions: async () => {
+        const res = await fetch(`${API_BASE}/api/ai/chat-sessions`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    getSessionMessages: async (session_id) => {
+        const res = await fetch(`${API_BASE}/api/ai/chat-sessions/${session_id}/messages`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    deleteSession: async (session_id) => {
+        const res = await fetch(`${API_BASE}/api/ai/chat-sessions/${session_id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    // Career Roadmap
+    /**
+     * @param {string} target_role 
+     * @param {string|null} [current_role] 
+     * @param {string[]} [current_skills] 
+     * @param {string|null} [time_frame] 
+     */
+    createRoadmap: async (target_role, current_role = null, current_skills = [], time_frame = null) => {
+        const body = { target_role };
+        if (current_role) body.current_role = current_role;
+        if (current_skills.length > 0) body.current_skills = current_skills;
+        if (time_frame) body.time_frame = time_frame;
+
+        const res = await fetch(`${API_BASE}/api/ai/career-roadmap`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+        });
+        return handleResponse(res);
+    },
+
+    getRoadmaps: async () => {
+        const res = await fetch(`${API_BASE}/api/ai/career-roadmaps`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    deleteRoadmap: async (roadmap_id) => {
+        const res = await fetch(`${API_BASE}/api/ai/career-roadmaps/${roadmap_id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return handleResponse(res);
     }
 };

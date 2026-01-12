@@ -65,19 +65,13 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
     const emailLower = data.email.toLowerCase();
 
-    // Check for demo accounts first
-    if (demoAccounts[emailLower] && data.password === 'demo123') {
-      setTimeout(() => {
-        onLoginSuccess(demoAccounts[emailLower]);
-        setIsLoading(false);
-      }, 500);
-      return;
-    }
+    // Demo check removed to enforce real backend authentication for AI features
+    // if (demoAccounts[emailLower] && data.password === 'demo123') { ... }
 
     try {
       const result = await authAPI.login(data.email, data.password);
 
-      if (result.access_token) {
+      if (result.access_token || result.token) {
         // Lấy thông tin user để xác định role
         const userInfo = await authAPI.getMe();
         let role: UserRole = 'user';
@@ -126,7 +120,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
       if (result.message?.includes('thành công') || result.user_id) {
         // Tự động login sau khi đăng ký thành công
         const loginResult = await authAPI.login(data.email, data.password);
-        if (loginResult.access_token) {
+        if (loginResult.access_token || loginResult.token) {
           onLoginSuccess(selectedRole);
         } else {
           setError('Đăng ký thành công! Vui lòng đăng nhập.');

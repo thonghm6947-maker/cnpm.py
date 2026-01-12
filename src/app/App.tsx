@@ -4,6 +4,7 @@ import AuthPage from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { CVAnalyzer } from './components/CVAnalyzer';
 import { CareerCoach } from './components/CareerCoach';
+import { CareerRoadmap } from './components/CareerRoadmap';
 import { JobMarketplace } from './components/JobMarketplace';
 import { Profile } from './components/Profile';
 import { LearningHub } from './components/LearningHub';
@@ -20,7 +21,7 @@ import { RecruiterProfile } from './components/RecruiterProfile';
 
 // Extended Page types with Admin and Recruiter pages
 export type Page =
-  | 'landing' | 'auth' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'jobs' | 'profile' | 'learning'
+  | 'landing' | 'auth' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'career-roadmap' | 'jobs' | 'profile' | 'learning'
   | 'admin-dashboard' | 'admin-users' | 'admin-subscriptions' | 'admin-jobs'
   | 'recruiter-dashboard' | 'recruiter-jobs' | 'recruiter-candidates' | 'recruiter-profile';
 
@@ -137,6 +138,9 @@ export default function App() {
       )}
       {currentPage === 'career-coach' && (
         <CareerCoach onNavigate={navigateTo} onLogout={handleLogout} />
+      )}
+      {currentPage === 'career-roadmap' && (
+        <CareerRoadmap onNavigate={navigateTo} onLogout={handleLogout} />
       )}
       {currentPage === 'jobs' && (
         <JobMarketplace onNavigate={navigateTo} onLogout={handleLogout} />
