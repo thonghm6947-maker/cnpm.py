@@ -1,8 +1,12 @@
 # Configuration settings for the Flask application
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+
+# Load .env from same directory as this config file
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class FactoryConfig:
     """Factory to get configuration based on environment."""
@@ -24,6 +28,21 @@ class Config:
     TESTING = os.environ.get('TESTING', 'False').lower() in ['true', '1']
     DATABASE_URI = os.environ.get('DATABASE_URI') or 'mssql+pymssql://sa:Aa%40123456@127.0.0.1:1433/DemoFlaskApi'
     CORS_HEADERS = 'Content-Type'
+    
+    # Gemini AI Configuration
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
+    
+    # Multi-LLM Provider Configuration
+    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'ollama')  # ollama, groq, or gemini
+    
+    # Ollama (Local) - No limits
+    OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3')
+    OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
+    
+    # Groq (Cloud) - Fast with generous limits
+    GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+    GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
 
 class DevelopmentConfig(Config):
     """Development configuration."""

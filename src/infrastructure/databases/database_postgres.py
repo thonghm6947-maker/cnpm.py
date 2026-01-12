@@ -9,7 +9,7 @@ from config import Config, DevelopmentConfig
 from infrastructure.databases.base import Base
 
 class DatabasePostgres(AbstractDatabase):
-    def __innit__(self):
+    def __init__(self):
         super().__init__()
         
     def init_database(self, app):

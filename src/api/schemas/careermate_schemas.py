@@ -120,3 +120,72 @@ class CVAnalysisSchema(Schema):
     feedback = fields.Str()
     missing_skills = fields.Str()
     strengths = fields.Str()
+
+
+# ============ AI Schemas ============
+class CVAnalyzeRequestSchema(Schema):
+    """Schema for CV analysis request."""
+    resume_id = fields.Int(required=False)
+    cv_text = fields.Str(required=False)
+    job_description = fields.Str(required=False)
+    target_role = fields.Str(required=False)
+
+
+class CVAnalyzeResponseSchema(Schema):
+    """Schema for CV analysis response."""
+    ats_score = fields.Float()
+    strengths = fields.List(fields.Str())
+    missing_skills = fields.List(fields.Str())
+    feedback = fields.Str()
+    recommendations = fields.List(fields.Str())
+
+
+class CareerCoachMessageRequestSchema(Schema):
+    """Schema for career coach chat message request."""
+    message = fields.Str(required=True, validate=validate.Length(min=1))
+    session_id = fields.Int(required=False)
+    topic = fields.Str(required=False)
+
+
+class CareerCoachMessageResponseSchema(Schema):
+    """Schema for career coach chat message response."""
+    session_id = fields.Int()
+    user_message = fields.Dict()
+    ai_response = fields.Dict()
+
+
+class ChatSessionSchema(Schema):
+    """Schema for chat session."""
+    session_id = fields.Int(dump_only=True)
+    user_id = fields.Int(dump_only=True)
+    topic = fields.Str()
+    created_at = fields.DateTime(dump_only=True)
+    updated_at = fields.DateTime(dump_only=True)
+    message_count = fields.Int(dump_only=True)
+
+
+class ChatMessageResponseSchema(Schema):
+    """Schema for chat message response."""
+    msg_id = fields.Int(dump_only=True)
+    sender = fields.Str()
+    content = fields.Str()
+    sent_at = fields.Str()
+
+
+class CareerRoadmapRequestSchema(Schema):
+    """Schema for career roadmap generation request."""
+    target_role = fields.Str(required=True, validate=validate.Length(min=2))
+    current_role = fields.Str(required=False)
+    current_skills = fields.List(fields.Str(), required=False)
+    time_frame = fields.Str(required=False, load_default="12 months")
+
+
+class CareerRoadmapResponseSchema(Schema):
+    """Schema for career roadmap response."""
+    roadmap_id = fields.Int()
+    title = fields.Str()
+    target_role = fields.Str()
+    estimated_duration = fields.Str()
+    phases = fields.List(fields.Dict())
+    summary = fields.Str()
+

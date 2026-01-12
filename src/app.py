@@ -18,6 +18,7 @@ from api.controllers.careermate.job_controller import cm_job_bp
 from api.controllers.careermate.profile_controller import cm_profile_bp
 from api.controllers.careermate.recruiter_controller import cm_recruiter_bp
 from api.controllers.careermate.admin_controller import cm_admin_bp
+from api.controllers.careermate.ai_controller import cm_ai_bp
 
 
 def create_app():
@@ -37,6 +38,7 @@ def create_app():
     app.register_blueprint(cm_profile_bp)
     app.register_blueprint(cm_recruiter_bp)
     app.register_blueprint(cm_admin_bp)
+    app.register_blueprint(cm_ai_bp)  # AI Career Coach & CV Analyzer
     
     # register_routes(app)
      # Thêm Swagger UI blueprint

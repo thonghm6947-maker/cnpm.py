@@ -11,3 +11,6 @@ fastapi
 apispec
 apispec_webframeworks
 flask-swagger-ui
+google-generativeai>=0.3.0
+PyPDF2>=3.0.0
+python-docx>=0.8.11
