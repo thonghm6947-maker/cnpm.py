@@ -18,11 +18,15 @@ class CMUserModel(Base):
 
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(512), nullable=False)
+    password_hash = Column(String(512), nullable=True)  # Nullable for OAuth users
     role = Column(Enum(UserRole), nullable=False, default=UserRole.CANDIDATE)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # OAuth fields
+    oauth_provider = Column(String(50), nullable=True)  # e.g., "google", "facebook"
+    oauth_id = Column(String(255), nullable=True, index=True)  # Provider's user ID
 
     # Relationships
     candidate_profile = relationship("CandidateProfileModel", back_populates="user", uselist=False)

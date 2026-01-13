@@ -24,6 +24,9 @@ from api.controllers.careermate.ai_controller import cm_ai_bp
 def create_app():
     app = Flask(__name__)
     
+    # Load configuration from Config class
+    app.config.from_object(Config)
+    
     # Enable CORS for frontend connection
     init_cors(app)
     

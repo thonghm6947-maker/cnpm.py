@@ -22,7 +22,9 @@ class UserRepository(IUserRepository):
                 email=user.email,
                 password_hash=user.password_hash,
                 role=role_enum,
-                is_active=user.is_active
+                is_active=user.is_active,
+                oauth_provider=user.oauth_provider,
+                oauth_id=user.oauth_id
             )
             self.session.add(new_user)
             self.session.commit()
@@ -65,10 +67,12 @@ class UserRepository(IUserRepository):
         return User(
             user_id=model.user_id,
             email=model.email,
-            password_hash=model.password_hash,
             role=model.role.value,
+            password_hash=model.password_hash,
             is_active=model.is_active,
-            created_at=model.created_at
+            created_at=model.created_at,
+            oauth_provider=model.oauth_provider,
+            oauth_id=model.oauth_id
         )
     
     def get_all(self, role_filter: str = None) -> list:

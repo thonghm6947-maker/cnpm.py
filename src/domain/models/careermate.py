@@ -8,11 +8,13 @@ from datetime import datetime
 class User:
     """User domain entity."""
     email: str
-    password_hash: str
     role: str  # candidate, recruiter, admin
+    password_hash: Optional[str] = None  # Optional for OAuth users
     user_id: Optional[int] = None
     is_active: bool = True
     created_at: Optional[datetime] = None
+    oauth_provider: Optional[str] = None  # e.g., "google", "facebook"
+    oauth_id: Optional[str] = None  # Provider's user ID
 
 
 @dataclass

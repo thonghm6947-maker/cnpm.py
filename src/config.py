@@ -43,6 +43,14 @@ class Config:
     # Groq (Cloud) - Fast with generous limits
     GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
     GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+    
+    # Google OAuth Configuration
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:9999/api/auth/google/callback')
+    
+    # Frontend URL for OAuth callback redirect
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 class DevelopmentConfig(Config):
     """Development configuration."""

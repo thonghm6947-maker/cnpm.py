@@ -252,3 +252,114 @@ def health_check():
           description: API is working
     """
     return jsonify({'message': 'CareerMate Auth API is working!'}), 200
+
+
+# ============== Google OAuth Endpoints ==============
+
+@cm_auth_bp.route('/google', methods=['GET'])
+def google_login():
+    """
+    Initiate Google OAuth login
+    ---
+    get:
+      summary: Start Google OAuth flow
+      tags:
+        - CareerMate Auth
+      parameters:
+        - name: role
+          in: query
+          type: string
+          enum: [candidate, recruiter]
+          default: candidate
+          description: User role for new registrations
+      responses:
+        302:
+          description: Redirect to Google OAuth consent page
+        500:
+          description: OAuth configuration error
+    """
+    from services.careermate.oauth_service import get_oauth_service
+    
+    role = request.args.get('role', 'candidate')
+    if role not in ['candidate', 'recruiter']:
+        role = 'candidate'
+    
+    try:
+        oauth_service = get_oauth_service()
+        result = oauth_service.get_google_auth_url(role)
+        
+        # Redirect to Google OAuth
+        from flask import redirect
+        return redirect(result['auth_url'])
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to initiate Google OAuth'}), 500
+
+
+@cm_auth_bp.route('/google/callback', methods=['GET'])
+def google_callback():
+    """
+    Handle Google OAuth callback
+    ---
+    get:
+      summary: Handle Google OAuth callback
+      tags:
+        - CareerMate Auth
+      parameters:
+        - name: code
+          in: query
+          type: string
+          required: true
+          description: Authorization code from Google
+        - name: state
+          in: query
+          type: string
+          description: State parameter
+      responses:
+        302:
+          description: Redirect to frontend with token
+        400:
+          description: Missing authorization code
+        401:
+          description: OAuth authentication failed
+    """
+    from services.careermate.oauth_service import get_oauth_service
+    from flask import redirect
+    
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    # Handle OAuth errors (user denied access, etc.)
+    if error:
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+        return redirect(f"{frontend_url}/login?error={error}")
+    
+    if not code:
+        return jsonify({'error': 'Authorization code is missing'}), 400
+    
+    try:
+        oauth_service = get_oauth_service()
+        result = oauth_service.handle_google_callback(code, state)
+        
+        if not result:
+            return jsonify({'error': 'OAuth authentication failed'}), 401
+        
+        # Redirect to frontend with token
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+        access_token = result['access_token']
+        role = result['user']['role']
+        
+        # Redirect to frontend with token in URL fragment (more secure than query params)
+        return redirect(f"{frontend_url}/oauth/callback?token={access_token}&role={role}")
+        
+    except Exception as e:
+        print(f"Google OAuth callback error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'OAuth callback failed'}), 500
