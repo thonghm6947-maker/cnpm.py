@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import AuthPage from './components/AuthPage';
+import OAuthCallback from './components/OAuthCallback';
 import { Dashboard } from './components/Dashboard';
 import { CVAnalyzer } from './components/CVAnalyzer';
 import { CareerCoach } from './components/CareerCoach';
@@ -19,9 +20,9 @@ import { RecruiterJobManagement } from './components/RecruiterJobManagement';
 import { RecruiterCandidates } from './components/RecruiterCandidates';
 import { RecruiterProfile } from './components/RecruiterProfile';
 
-// Extended Page types with Admin and Recruiter pages
+// Extended Page types with Admin, Recruiter, and OAuth pages
 export type Page =
-  | 'landing' | 'auth' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'career-roadmap' | 'jobs' | 'profile' | 'learning'
+  | 'landing' | 'auth' | 'oauth-callback' | 'dashboard' | 'cv-analyzer' | 'career-coach' | 'career-roadmap' | 'jobs' | 'profile' | 'learning'
   | 'admin-dashboard' | 'admin-users' | 'admin-subscriptions' | 'admin-jobs'
   | 'recruiter-dashboard' | 'recruiter-jobs' | 'recruiter-candidates' | 'recruiter-profile';
 
@@ -32,6 +33,21 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>('user');
 
+  // Check for OAuth callback on initial load
+  useEffect(() => {
+    const checkOAuthCallback = () => {
+      const path = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+
+      // Check if this is an OAuth callback (either /oauth/callback or has token param)
+      if (path === '/oauth/callback' || params.has('token')) {
+        setCurrentPage('oauth-callback');
+      }
+    };
+
+    checkOAuthCallback();
+  }, []);
+
   // Được gọi khi nhấn nút "Bắt đầu" hoặc "Login" ở Landing Page
   const handleStartLogin = () => {
     setCurrentPage('auth');
@@ -41,6 +57,11 @@ export default function App() {
   const handleLoginSuccess = (role: UserRole = 'user') => {
     setIsLoggedIn(true);
     setUserRole(role);
+
+    // Clean up URL after OAuth callback
+    if (window.location.search.includes('token')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     // Redirect based on role
     switch (role) {
@@ -59,6 +80,8 @@ export default function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_role');
     setCurrentPage('landing');
   };
 
@@ -71,6 +94,16 @@ export default function App() {
 
   // 1. Nếu chưa đăng nhập
   if (!isLoggedIn) {
+    // Xử lý OAuth callback
+    if (currentPage === 'oauth-callback') {
+      return (
+        <OAuthCallback
+          onLoginSuccess={handleLoginSuccess}
+          onError={() => setCurrentPage('auth')}
+        />
+      );
+    }
+
     // Nếu đang ở trang Auth -> hiển thị AuthPage
     if (currentPage === 'auth') {
       return (

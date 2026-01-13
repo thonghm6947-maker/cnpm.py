@@ -373,10 +373,15 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
         <div className="flex justify-center w-full">
           <button
             type="button"
+            onClick={() => {
+              // Determine role for OAuth: 'recruiter' or 'candidate' (default)
+              const oauthRole = selectedRole === 'recruiter' ? 'recruiter' : 'candidate';
+              window.location.href = `http://localhost:9999/api/auth/google?role=${oauthRole}`;
+            }}
             className="flex w-full max-w-xs items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
           >
             <GoogleIcon />
-            Google
+            Đăng nhập với Google
           </button>
         </div>
 
