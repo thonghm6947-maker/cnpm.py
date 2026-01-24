@@ -29,7 +29,7 @@ from infrastructure.models.careermate import (
 
 def init_db(app):
     # init_mssql(app)
-    FactoryDatabase.get_database('POSTGREE').init_database(app)
+    FactoryDatabase.get_database('MSSQL').init_database(app)
     # init_postgres(app)
     
 # Migration Entities -> tables
