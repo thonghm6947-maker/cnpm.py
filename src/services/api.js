@@ -88,6 +88,34 @@ export const authAPI = {
             headers: authHeaders()
         });
         return res.json();
+    },
+
+    // Password Reset APIs
+    sendPasswordResetOTP: async (email) => {
+        const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        return res.json();
+    },
+
+    verifyOTP: async (email, otp_code) => {
+        const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp_code })
+        });
+        return res.json();
+    },
+
+    resetPassword: async (email, otp_code, new_password) => {
+        const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp_code, new_password })
+        });
+        return res.json();
     }
 };
 

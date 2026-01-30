@@ -44,7 +44,7 @@ export function CareerCoach({ onNavigate, onLogout }: CareerCoachProps) {
     {
       id: 1,
       type: 'ai',
-      content: "Hi! 👋 I'm your AI Career Coach powered by Google Gemini. I'm here to help you with career guidance, skill recommendations, interview prep, and creating your personalized career roadmap. How can I assist you today?",
+      content: "Hi! 👋 I'm your AI Career Coach. I'm here to help you with career guidance, skill recommendations, interview prep, and creating your personalized career roadmap. How can I assist you today?",
       timestamp: new Date()
     }
   ]);

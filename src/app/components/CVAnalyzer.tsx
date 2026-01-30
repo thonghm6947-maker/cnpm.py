@@ -51,6 +51,112 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [improvementResult, setImprovementResult] = useState<ImprovementResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    // For now, we'll read the file content
+    // In production, you might want to use a library like pdf.js for PDF or mammoth.js for DOCX
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target?.result;
+          if (file.type === 'application/pdf') {
+            // For PDF, we'll send the base64 content to backend for processing
+            // Or use pdf.js library on frontend
+            resolve(`[PDF File: ${file.name}]\n\nNote: PDF content extraction requires backend processing. Please paste your CV text manually or ensure the backend PDF extraction is configured.`);
+          } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            file.name.endsWith('.docx')) {
+            // For DOCX, similar approach
+            resolve(`[DOCX File: ${file.name}]\n\nNote: DOCX content extraction requires backend processing. Please paste your CV text manually or ensure the backend DOCX extraction is configured.`);
+          } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+            resolve(content as string);
+          } else {
+            reject(new Error('Unsupported file format'));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain'
+    ];
+    const allowedExtensions = ['.pdf', '.docx', '.doc', '.txt'];
+
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      setError('Please upload a PDF, DOCX, DOC, or TXT file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setError('File size must be less than 10MB');
+      return;
+    }
+
+    setUploadedFile(file);
+    setIsExtracting(true);
+    setError(null);
+
+    try {
+      const text = await extractTextFromFile(file);
+      setCvText(text);
+    } catch (err) {
+      setError('Failed to extract text from file. Please try pasting your CV content manually.');
+      console.error('File extraction error:', err);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    setCvText('');
+  };
 
   const handleAnalyzeCV = async () => {
     if (!cvText.trim()) {
@@ -146,6 +252,91 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
 
         {!analysisResult ? (
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* File Upload Section */}
+            <Card className="p-6">
+              <h2 className="text-xl mb-4 font-semibold flex items-center gap-2">
+                <Upload className="w-5 h-5 text-blue-600" />
+                Upload Your CV
+              </h2>
+
+              {!uploadedFile ? (
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`
+                    relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer
+                    ${isDragging
+                      ? 'border-blue-500 bg-blue-50 scale-[1.02]'
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                    }
+                  `}
+                  onClick={() => document.getElementById('cv-file-input')?.click()}
+                >
+                  <input
+                    id="cv-file-input"
+                    type="file"
+                    accept=".pdf,.docx,.doc,.txt"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+
+                  <div className="flex flex-col items-center gap-4">
+                    <div className={`
+                      w-16 h-16 rounded-full flex items-center justify-center transition-all
+                      ${isDragging ? 'bg-blue-100' : 'bg-gray-100'}
+                    `}>
+                      <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                    </div>
+
+                    <div>
+                      <p className="text-lg font-medium text-gray-700">
+                        {isDragging ? 'Drop your CV here' : 'Drag and drop your CV file'}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        or <span className="text-blue-600 hover:underline">click to browse</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <FileText className="w-4 h-4" />
+                      <span>Supported formats: PDF, DOCX, DOC, TXT (Max 10MB)</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                    {isExtracting ? (
+                      <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-green-800">{uploadedFile.name}</p>
+                    <p className="text-sm text-green-600">
+                      {isExtracting ? 'Extracting content...' : 'File uploaded successfully'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeUploadedFile}
+                    className="text-green-700 hover:text-red-600 hover:bg-red-50"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-sm text-gray-500">or paste your CV text below</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
+              </div>
+            </Card>
+
             {/* CV Input Section */}
             <Card className="p-6">
               <h2 className="text-xl mb-4 font-semibold flex items-center gap-2">
