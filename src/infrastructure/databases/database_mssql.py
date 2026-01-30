@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from config import Config
 from infrastructure.databases.base import Base
 class DatabaseMSSQL(AbstractDatabase):
-    def __innit__(self):
+    def __init__(self):
         super().__init__()
         
     def init_database(self, app):

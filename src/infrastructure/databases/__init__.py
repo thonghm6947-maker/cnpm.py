@@ -25,12 +25,19 @@ from infrastructure.models.careermate import (
     CareerRoadmapModel,
     ChatSessionModel,
     ChatMessageModel,
+    PasswordResetModel,
 )
 
 def init_db(app):
-    # init_mssql(app)
-    FactoryDatabase.get_database('POSTGREE').init_database(app)
-    # init_postgres(app)
+    import os
+    db_type = os.environ.get('DB_TYPE', 'sqlite').lower()
+    
+    if db_type == 'mssql':
+        # Use MSSQL factory
+        FactoryDatabase.get_database('MSSQL').init_database(app)
+    else:
+        # Default to PostgreSQL/SQLite
+        FactoryDatabase.get_database('POSTGREE').init_database(app)
     
 # Migration Entities -> tables
 from infrastructure.databases.mssql import Base

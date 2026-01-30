@@ -254,6 +254,200 @@ def health_check():
     return jsonify({'message': 'CareerMate Auth API is working!'}), 200
 
 
+# ============== Password Reset Endpoints ==============
+
+@cm_auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    Request password reset OTP
+    ---
+    post:
+      summary: Send OTP to user's email for password reset
+      tags:
+        - CareerMate Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        200:
+          description: OTP sent successfully
+        400:
+          description: Invalid email format
+        500:
+          description: Server error
+    """
+    from services.careermate.password_reset_service import PasswordResetService
+    
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    
+    if not email:
+        return jsonify({'error': 'Email là bắt buộc.'}), 400
+    
+    # Basic email validation
+    if '@' not in email or '.' not in email:
+        return jsonify({'error': 'Email không hợp lệ.'}), 400
+    
+    try:
+        service = PasswordResetService()
+        result = service.send_otp(email)
+        
+        if result.get('success'):
+            return jsonify({'message': result.get('message')}), 200
+        else:
+            return jsonify({'error': result.get('message')}), 400
+            
+    except Exception as e:
+        print(f"Forgot password error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Đã xảy ra lỗi. Vui lòng thử lại sau.'}), 500
+
+
+@cm_auth_bp.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    """
+    Verify OTP code
+    ---
+    post:
+      summary: Verify the OTP code sent to user's email
+      tags:
+        - CareerMate Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp_code
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp_code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        200:
+          description: OTP is valid
+        400:
+          description: Invalid OTP or expired
+        500:
+          description: Server error
+    """
+    from services.careermate.password_reset_service import PasswordResetService
+    
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    otp_code = data.get('otp_code', '').strip()
+    
+    if not email or not otp_code:
+        return jsonify({'error': 'Email và mã OTP là bắt buộc.', 'valid': False}), 400
+    
+    if len(otp_code) != 6 or not otp_code.isdigit():
+        return jsonify({'error': 'Mã OTP phải là 6 chữ số.', 'valid': False}), 400
+    
+    try:
+        service = PasswordResetService()
+        result = service.verify_otp(email, otp_code)
+        
+        if result.get('valid'):
+            return jsonify({
+                'message': result.get('message'),
+                'valid': True
+            }), 200
+        else:
+            return jsonify({
+                'error': result.get('message'),
+                'valid': False
+            }), 400
+            
+    except Exception as e:
+        print(f"Verify OTP error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Đã xảy ra lỗi. Vui lòng thử lại sau.', 'valid': False}), 500
+
+
+@cm_auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Reset password with OTP verification
+    ---
+    post:
+      summary: Reset user's password after OTP verification
+      tags:
+        - CareerMate Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp_code
+                - new_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp_code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                new_password:
+                  type: string
+                  minLength: 6
+      responses:
+        200:
+          description: Password reset successfully
+        400:
+          description: Invalid request or OTP
+        500:
+          description: Server error
+    """
+    from services.careermate.password_reset_service import PasswordResetService
+    
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    otp_code = data.get('otp_code', '').strip()
+    new_password = data.get('new_password', '')
+    
+    if not email or not otp_code or not new_password:
+        return jsonify({'error': 'Tất cả các trường là bắt buộc.'}), 400
+    
+    if len(new_password) < 6:
+        return jsonify({'error': 'Mật khẩu phải có ít nhất 6 ký tự.'}), 400
+    
+    try:
+        service = PasswordResetService()
+        result = service.reset_password(email, otp_code, new_password)
+        
+        if result.get('success'):
+            return jsonify({'message': result.get('message')}), 200
+        else:
+            return jsonify({'error': result.get('message')}), 400
+            
+    except Exception as e:
+        print(f"Reset password error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Đã xảy ra lỗi. Vui lòng thử lại sau.'}), 500
+
+
 # ============== Google OAuth Endpoints ==============
 
 @cm_auth_bp.route('/google', methods=['GET'])

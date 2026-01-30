@@ -16,6 +16,7 @@ from .candidate_skill_model import CandidateSkillModel
 from .career_roadmap_model import CareerRoadmapModel
 from .chat_session_model import ChatSessionModel
 from .chat_message_model import ChatMessageModel
+from .password_reset_model import PasswordResetModel
 
 __all__ = [
     'CMUserModel',
@@ -35,4 +36,5 @@ __all__ = [
     'CareerRoadmapModel',
     'ChatSessionModel',
     'ChatMessageModel',
+    'PasswordResetModel',
 ]
