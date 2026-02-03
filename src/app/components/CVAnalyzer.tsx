@@ -28,13 +28,18 @@ interface CVAnalyzerProps {
 }
 
 interface AnalysisResult {
-  skills: string[];
-  experience_years: number;
-  education: string[];
+  // Fields from API response
+  ats_score: number;
   strengths: string[];
-  weaknesses: string[];
-  match_score: number;
+  missing_skills: string[];
+  feedback: string;
   recommendations: string[];
+  // Mapped fields for display
+  skills?: string[];
+  experience_years?: number;
+  education?: string[];
+  weaknesses?: string[];
+  match_score?: number;
 }
 
 interface ImprovementResult {
@@ -56,38 +61,34 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const extractTextFromFile = async (file: File): Promise<string> => {
-    // For now, we'll read the file content
-    // In production, you might want to use a library like pdf.js for PDF or mammoth.js for DOCX
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const content = e.target?.result;
-          if (file.type === 'application/pdf') {
-            // For PDF, we'll send the base64 content to backend for processing
-            // Or use pdf.js library on frontend
-            resolve(`[PDF File: ${file.name}]\n\nNote: PDF content extraction requires backend processing. Please paste your CV text manually or ensure the backend PDF extraction is configured.`);
-          } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-            file.name.endsWith('.docx')) {
-            // For DOCX, similar approach
-            resolve(`[DOCX File: ${file.name}]\n\nNote: DOCX content extraction requires backend processing. Please paste your CV text manually or ensure the backend DOCX extraction is configured.`);
-          } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-            resolve(content as string);
-          } else {
-            reject(new Error('Unsupported file format'));
-          }
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-
-      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+    // For text files, read directly
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsText(file);
-      } else {
-        reader.readAsDataURL(file);
+      });
+    }
+
+    // For PDF and DOCX, use backend API
+    if (file.type === 'application/pdf' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.name.endsWith('.pdf') ||
+      file.name.endsWith('.docx')) {
+      try {
+        const response = await aiAPI.extractTextFromFile(file);
+        if (response.success && response.data?.text) {
+          return response.data.text;
+        } else {
+          throw new Error(response.error || 'Failed to extract text from file');
+        }
+      } catch (err: any) {
+        throw new Error(err.message || 'Failed to extract text from file');
       }
-    });
+    }
+
+    throw new Error('Unsupported file format');
   };
 
   const handleFileUpload = async (file: File) => {
@@ -176,6 +177,10 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
         targetRole || null
       );
 
+      // Debug: log response to see what data we receive
+      console.log('[CV-ANALYZE] Response:', response);
+      console.log('[CV-ANALYZE] Data:', response.data);
+
       if (response.success) {
         setAnalysisResult(response.data);
       } else {
@@ -229,7 +234,8 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
 
   const calculateOverallScore = () => {
     if (!analysisResult) return 0;
-    return analysisResult.match_score || 75;
+    // Use ats_score from API, fallback to match_score if exists
+    return analysisResult.ats_score || analysisResult.match_score || 0;
   };
 
   return (
@@ -478,18 +484,18 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
                     <h3 className="text-xl mb-4 font-semibold">Quick Stats</h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Experience</span>
-                        <span className="font-medium">{analysisResult.experience_years} years</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Skills Identified</span>
-                        <span className="font-medium">{(analysisResult.skills || []).length}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Match Score</span>
-                        <Badge variant={analysisResult.match_score >= 70 ? "default" : "secondary"}>
-                          {analysisResult.match_score}%
+                        <span className="text-gray-600">ATS Score</span>
+                        <Badge variant={(analysisResult.ats_score || 0) >= 70 ? "default" : "secondary"}>
+                          {analysisResult.ats_score || 0}/100
                         </Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600">Strengths</span>
+                        <span className="font-medium">{(analysisResult.strengths || []).length}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-gray-600">Missing Skills</span>
+                        <span className="font-medium text-orange-600">{(analysisResult.missing_skills || []).length}</span>
                       </div>
                     </div>
                   </Card>
@@ -514,10 +520,17 @@ export function CVAnalyzer({ onNavigate, onLogout }: CVAnalyzerProps) {
                 <Card className="p-6">
                   <h3 className="text-xl mb-4 font-semibold">Areas for Improvement</h3>
                   <div className="space-y-4">
-                    {(analysisResult.weaknesses || []).map((weakness, index) => (
+                    {/* Show feedback first */}
+                    {analysisResult.feedback && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                        <p className="text-blue-800 whitespace-pre-wrap">{analysisResult.feedback}</p>
+                      </div>
+                    )}
+                    {/* Show missing skills as areas for improvement */}
+                    {(analysisResult.missing_skills || []).map((skill, index) => (
                       <div key={index} className="flex gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                         <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-orange-800">{weakness}</p>
+                        <p className="text-orange-800">Missing Skill: {skill}</p>
                       </div>
                     ))}
                   </div>

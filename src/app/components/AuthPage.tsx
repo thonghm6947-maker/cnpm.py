@@ -86,7 +86,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
       const result = await authAPI.login(data.email, data.password);
 
       if (result.access_token || result.token) {
-        // Lấy thông tin user để xác định role
+        // Get user info to determine role
         const userInfo = await authAPI.getMe();
         let role: UserRole = 'user';
 
@@ -98,11 +98,11 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
         onLoginSuccess(role);
       } else {
-        setError(result.error || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+        setError(result.error || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       // If API fails, suggest demo accounts
-      setError('Lỗi kết nối server. Thử đăng nhập demo: admin@demo.com / demo123');
+      setError('Server connection error. Try demo login: admin@demo.com / demo123');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);
@@ -116,7 +116,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
     // Validate password confirmation
     if (data.password !== data.password_confirm) {
-      setError('Mật khẩu xác nhận không khớp.');
+      setError('Passwords do not match.');
       setIsLoading(false);
       return;
     }
@@ -131,19 +131,19 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
         phone: data.phone || ''
       });
 
-      if (result.message?.includes('thành công') || result.user_id) {
-        // Tự động login sau khi đăng ký thành công
+      if (result.message?.includes('success') || result.user_id) {
+        // Auto login after successful registration
         const loginResult = await authAPI.login(data.email, data.password);
         if (loginResult.access_token || loginResult.token) {
           onLoginSuccess(selectedRole);
         } else {
-          setError('Đăng ký thành công! Vui lòng đăng nhập.');
+          setError('Registration successful! Please login.');
         }
       } else {
-        setError(result.error || 'Đăng ký thất bại. Vui lòng thử lại.');
+        setError(result.error || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError('Lỗi kết nối server. Vui lòng thử lại sau.');
+      setError('Server connection error. Please try again later.');
       console.error('Signup error:', err);
     } finally {
       setIsLoading(false);
@@ -153,7 +153,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   // Forgot Password Handlers
   const handleSendOTP = async () => {
     if (!forgotEmail) {
-      setError('Vui lòng nhập email.');
+      setError('Please enter your email.');
       return;
     }
 
@@ -166,11 +166,11 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
       if (result.error) {
         setError(result.error);
       } else {
-        setForgotPasswordMessage(result.message || `Mã xác nhận đã được gửi đến ${forgotEmail}`);
+        setForgotPasswordMessage(result.message || `Verification code sent to ${forgotEmail}`);
         setForgotPasswordStep('otp');
       }
     } catch (err) {
-      setError('Không thể gửi mã xác nhận. Vui lòng thử lại.');
+      setError('Unable to send verification code. Please try again.');
       console.error('Send OTP error:', err);
     } finally {
       setIsLoading(false);
@@ -179,7 +179,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
   const handleVerifyOTP = async () => {
     if (!otpCode || otpCode.length < 6) {
-      setError('Vui lòng nhập mã OTP 6 số.');
+      setError('Please enter a 6-digit OTP.');
       return;
     }
 
@@ -193,10 +193,10 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
         setForgotPasswordStep('newPassword');
         setForgotPasswordMessage('');
       } else {
-        setError(result.error || 'Mã OTP không hợp lệ.');
+        setError(result.error || 'Invalid OTP code.');
       }
     } catch (err) {
-      setError('Mã OTP không đúng. Vui lòng thử lại.');
+      setError('Invalid OTP code. Please try again.');
       console.error('Verify OTP error:', err);
     } finally {
       setIsLoading(false);
@@ -205,15 +205,15 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
   const handleResetPassword = async () => {
     if (!newPassword) {
-      setError('Vui lòng nhập mật khẩu mới.');
+      setError('Please enter a new password.');
       return;
     }
     if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+      setError('Password must have at least 6 characters.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
+      setError('Confirm password does not match.');
       return;
     }
 
@@ -229,7 +229,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
         setForgotPasswordStep('success');
       }
     } catch (err) {
-      setError('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+      setError('Unable to reset password. Please try again.');
       console.error('Reset password error:', err);
     } finally {
       setIsLoading(false);
@@ -248,8 +248,8 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
   };
 
   const roleOptions = [
-    { value: 'user' as UserRole, label: 'Ứng viên', icon: User, description: 'Tìm kiếm việc làm phù hợp' },
-    { value: 'recruiter' as UserRole, label: 'Nhà tuyển dụng', icon: Building2, description: 'Đăng tin và tuyển dụng' },
+    { value: 'user' as UserRole, label: 'Candidate', icon: User, description: 'Find suitable jobs' },
+    { value: 'recruiter' as UserRole, label: 'Recruiter', icon: Building2, description: 'Post jobs and hire' },
   ];
 
   // Forgot Password UI
@@ -261,7 +261,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
           onClick={resetForgotPassword}
           className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Quay lại đăng nhập
+          <ArrowLeft className="w-4 h-4" /> Back to Login
         </button>
 
         <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
@@ -272,9 +272,9 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                   <Mail className="w-8 h-8 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Quên mật khẩu?</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Forgot Password?</h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Nhập email của bạn và chúng tôi sẽ gửi mã xác nhận để đặt lại mật khẩu.
+                  Enter your email and we'll send you a verification code to reset your password.
                 </p>
               </div>
 
@@ -304,7 +304,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                   disabled={isLoading}
                   className="w-full rounded-lg bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
                 >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Gửi mã xác nhận"}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Send Verification Code"}
                 </button>
               </div>
             </>
@@ -317,9 +317,9 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <KeyRound className="w-8 h-8 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Nhập mã xác nhận</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Enter Verification Code</h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Chúng tôi đã gửi mã 6 số đến <span className="font-medium text-gray-900">{forgotEmail}</span>
+                  We've sent a 6-digit code to <span className="font-medium text-gray-900">{forgotEmail}</span>
                 </p>
               </div>
 
@@ -331,7 +331,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Mã OTP</label>
+                  <label className="text-sm font-medium text-gray-700">OTP Code</label>
                   <input
                     type="text"
                     value={otpCode}
@@ -353,7 +353,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                   disabled={isLoading || otpCode.length < 6}
                   className="w-full rounded-lg bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
                 >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Xác nhận"}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Verify"}
                 </button>
 
                 <button
@@ -363,7 +363,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                   }}
                   className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
                 >
-                  Không nhận được mã? <span className="text-blue-600 font-medium">Gửi lại</span>
+                  Did not receive code? <span className="text-blue-600 font-medium">Resend</span>
                 </button>
               </div>
             </>
@@ -376,22 +376,22 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
                   <Lock className="w-8 h-8 text-purple-600" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Đặt mật khẩu mới</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Reset Password</h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Tạo mật khẩu mới cho tài khoản của bạn
+                  Create a new password for your account
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Mật khẩu mới</label>
+                  <label className="text-sm font-medium text-gray-700">New Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     <input
                       type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Nhập mật khẩu mới"
+                      placeholder="Enter new password"
                       className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all"
                     />
                     <button
@@ -405,14 +405,14 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Xác nhận mật khẩu mới</label>
+                  <label className="text-sm font-medium text-gray-700">Confirm New Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     <input
                       type={showConfirmNewPassword ? "text" : "password"}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      placeholder="Nhập lại mật khẩu mới"
+                      placeholder="Re-enter new password"
                       className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all"
                     />
                     <button
@@ -428,10 +428,10 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 {/* Password requirements */}
                 <div className="text-xs text-gray-500 space-y-1">
                   <p className={newPassword.length >= 6 ? 'text-green-600' : ''}>
-                    • Ít nhất 6 ký tự {newPassword.length >= 6 && '✓'}
+                    • At least 6 characters {newPassword.length >= 6 && '✓'}
                   </p>
                   <p className={newPassword === confirmNewPassword && confirmNewPassword ? 'text-green-600' : ''}>
-                    • Mật khẩu khớp nhau {newPassword === confirmNewPassword && confirmNewPassword && '✓'}
+                    • Passwords match {newPassword === confirmNewPassword && confirmNewPassword && '✓'}
                   </p>
                 </div>
 
@@ -446,7 +446,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                   disabled={isLoading}
                   className="w-full rounded-lg bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
                 >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Đặt lại mật khẩu"}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Reset Password"}
                 </button>
               </div>
             </>
@@ -459,9 +459,9 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle2 className="w-8 h-8 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Thành công!</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Success!</h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Mật khẩu của bạn đã được đặt lại thành công. Bây giờ bạn có thể đăng nhập với mật khẩu mới.
+                  Your password has been successfully reset. You can now login with your new password.
                 </p>
               </div>
 
@@ -469,7 +469,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 onClick={resetForgotPassword}
                 className="w-full rounded-lg bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 flex items-center justify-center cursor-pointer transition-all"
               >
-                Quay lại đăng nhập
+                Back to Login
               </button>
             </>
           )}
@@ -485,14 +485,14 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
         onClick={onBack}
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
       >
-        <ArrowLeft className="w-4 h-4" /> Quay lại trang chủ
+        <ArrowLeft className="w-4 h-4" /> Back to Home
       </button>
 
       <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Tài khoản</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">Account</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Quản lý CV và sự nghiệp của bạn
+            Manage your CV and career
           </p>
         </div>
 
@@ -503,13 +503,13 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               value="login"
               className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm cursor-pointer hover:text-gray-700"
             >
-              Đăng nhập
+              Login
             </Tabs.Trigger>
             <Tabs.Trigger
               value="signup"
               className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm cursor-pointer hover:text-gray-700"
             >
-              Đăng ký
+              Sign Up
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -531,13 +531,13 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
+                  <label className="text-sm font-medium text-gray-700">Password</label>
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
                     className="text-xs text-blue-600 hover:underline cursor-pointer"
                   >
-                    Quên mật khẩu?
+                    Forgot Password?
                   </button>
                 </div>
                 <div className="relative">
@@ -569,7 +569,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 disabled={isLoading}
                 className="w-full rounded-lg bg-black py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Đăng nhập"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Login"}
               </button>
             </form>
           </Tabs.Content>
@@ -579,7 +579,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
             <form onSubmit={handleSignupSubmit(onSignup)} className="space-y-4">
               {/* Role Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Bạn là</label>
+                <label className="text-sm font-medium text-gray-700">You are</label>
                 <div className="grid grid-cols-2 gap-3">
                   {roleOptions.map((role) => {
                     const Icon = role.icon;
@@ -609,13 +609,13 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Họ và tên</label>
+                <label className="text-sm font-medium text-gray-700">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     {...registerSignup('name', { required: true })}
                     type="text"
-                    placeholder="Nguyễn Văn A"
+                    placeholder="John Doe"
                     className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none transition-all"
                   />
                 </div>
@@ -635,20 +635,20 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Số điện thoại</label>
+                <label className="text-sm font-medium text-gray-700">Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     {...registerSignup('phone')}
                     type="tel"
-                    placeholder="0912 345 678"
+                    placeholder="+1 234 567 890"
                     className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none transition-all"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Mật khẩu</label>
+                <label className="text-sm font-medium text-gray-700">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
@@ -667,7 +667,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
+                <label className="text-sm font-medium text-gray-700">Confirm Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
@@ -697,7 +697,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
                 disabled={isLoading}
                 className="w-full rounded-lg bg-black py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center cursor-pointer transition-all"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Tạo tài khoản"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Account"}
               </button>
             </form>
           </Tabs.Content>
@@ -709,7 +709,7 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
             <Separator.Root className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">Hoặc tiếp tục với</span>
+            <span className="bg-white px-2 text-gray-500">Or continue with</span>
           </div>
         </div>
 
@@ -724,12 +724,12 @@ export default function AuthPage({ onLoginSuccess, onBack }: AuthPageProps) {
             className="flex w-full max-w-xs items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
           >
             <GoogleIcon />
-            Đăng nhập với Google
+            Continue with Google
           </button>
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          Bằng việc tiếp tục, bạn đồng ý với <a href="#" className="underline hover:text-gray-900">Điều khoản</a> và <a href="#" className="underline hover:text-gray-900">Chính sách bảo mật</a>.
+          By continuing, you agree to our <a href="#" className="underline hover:text-gray-900">Terms of Service</a> and <a href="#" className="underline hover:text-gray-900">Privacy Policy</a>.
         </p>
       </div>
     </div>

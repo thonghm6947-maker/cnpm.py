@@ -121,8 +121,15 @@ export const authAPI = {
 
 // ============ Jobs API ============
 export const jobAPI = {
+    // List only APPROVED jobs for candidates
     list: async (page = 1, perPage = 10, search = '', location = '') => {
-        const params = new URLSearchParams({ page, per_page: perPage, search, location });
+        const params = new URLSearchParams({
+            page,
+            per_page: perPage,
+            search,
+            location,
+            status: 'approved'  // Only show admin-approved jobs
+        });
         const res = await fetch(`${API_BASE}/api/jobs?${params}`);
         return res.json();
     },
@@ -279,6 +286,15 @@ export const recruiterAPI = {
         return res.json();
     },
 
+    // Delete application (remove candidate from job)
+    deleteApplication: async (applicationId) => {
+        const res = await fetch(`${API_BASE}/api/recruiter/applications/${applicationId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.json();
+    },
+
     // Get dashboard stats
     getDashboardStats: async () => {
         const res = await fetch(`${API_BASE}/api/recruiter/dashboard`, {
@@ -335,6 +351,24 @@ export const adminAPI = {
         return res.json();
     },
 
+    // Update user status
+    updateUserStatus: async (userId, status) => {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}/status`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ status })
+        });
+        return res.json();
+    },
+
+    // Get user details with profile
+    getUserDetails: async (userId) => {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+            headers: authHeaders()
+        });
+        return res.json();
+    },
+
     // Get dashboard stats
     getDashboardStats: async () => {
         const res = await fetch(`${API_BASE}/api/admin/dashboard`, {
@@ -350,6 +384,22 @@ export const aiAPI = {
     health: async () => {
         const res = await fetch(`${API_BASE}/api/ai/health`);
         return res.json();
+    },
+
+    // Extract text from PDF/DOCX file
+    extractTextFromFile: async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/api/ai/extract-text`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        return handleResponse(res);
     },
 
     // CV Analyzer

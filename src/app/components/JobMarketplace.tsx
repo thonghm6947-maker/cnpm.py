@@ -5,6 +5,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
+import { Textarea } from './ui/textarea';
 import {
   Search,
   MapPin,
@@ -18,7 +20,11 @@ import {
   TrendingUp,
   Star,
   Bookmark,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  Send,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import type { Page } from '../App';
 import { jobAPI } from '../../services/api';
@@ -46,6 +52,8 @@ interface Job {
   requirements: string[];
   isSaved: boolean;
   is_saved?: boolean;
+  status?: string;
+  isApplied?: boolean;
 }
 
 interface ApplicationStats {
@@ -71,6 +79,11 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
     interviews: 0,
     savedJobs: 0
   });
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [applyingJob, setApplyingJob] = useState<Job | null>(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [applySuccess, setApplySuccess] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   // Fetch jobs from API
   useEffect(() => {
@@ -96,14 +109,16 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
           match: job.match_score || Math.floor(Math.random() * 20) + 75,
           description: job.description || '',
           requirements: job.requirements || job.skills || [],
-          isSaved: job.is_saved || false
+          isSaved: job.is_saved || false,
+          status: job.status || 'approved',
+          isApplied: job.is_applied || false
         }));
         setJobs(mappedJobs);
       } else if (result.error) {
         setError(result.error);
       }
     } catch (err) {
-      setError('Không thể tải danh sách việc làm. Vui lòng thử lại sau.');
+      setError('Cannot load jobs list. Please try again later.');
       console.error('Error fetching jobs:', err);
     } finally {
       setLoading(false);
@@ -152,6 +167,8 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
     }
   };
 
+
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Recently';
     const date = new Date(dateString);
@@ -186,18 +203,49 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
   const handleApply = async (jobId: number) => {
     setApplying(jobId);
     try {
-      const result = await jobAPI.apply(jobId, null, '');
-      if (result.application_id || result.message) {
-        alert('Đã nộp đơn thành công!');
+      const result = await jobAPI.apply(jobId, null, coverLetter);
+      if (result.application_id || result.success || result.message?.includes('success')) {
+        setApplySuccess(true);
+        setApplyError(null);
+        // Mark job as applied locally
+        setJobs(prev => prev.map(job =>
+          job.id === jobId ? { ...job, isApplied: true } : job
+        ));
         fetchApplicationStats();
-      } else if (result.error) {
-        alert(result.error);
+        // Close dialog after 2 seconds
+        setTimeout(() => {
+          setApplyDialogOpen(false);
+          setApplySuccess(false);
+          setCoverLetter('');
+          setApplyingJob(null);
+        }, 2000);
+      } else if (result.error || result.message) {
+        // Handle "already applied" or other errors
+        const errorMsg = result.error || result.message;
+        if (errorMsg.toLowerCase().includes('already') || errorMsg.toLowerCase().includes('đã ứng tuyển')) {
+          setApplyError('already_applied');
+          // Also mark as applied locally
+          setJobs(prev => prev.map(job =>
+            job.id === jobId ? { ...job, isApplied: true } : job
+          ));
+        } else {
+          setApplyError(errorMsg);
+        }
       }
     } catch (err) {
-      alert('Có lỗi xảy ra khi nộp đơn. Vui lòng thử lại.');
+      setApplyError('An error occurred while applying. Please try again.');
     } finally {
       setApplying(null);
     }
+  };
+
+  const openApplyDialog = (job: Job, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setApplyingJob(job);
+    setCoverLetter('');
+    setApplySuccess(false);
+    setApplyError(null);
+    setApplyDialogOpen(true);
   };
 
   const displayJobs = activeTab === 'saved' ? savedJobs : jobs;
@@ -209,6 +257,8 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
     { name: 'Amazon', openings: 56, rating: 4.5 },
     { name: 'Apple', openings: 28, rating: 4.9 }
   ];
+
+
 
 
   return (
@@ -231,15 +281,22 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
                   placeholder="Search jobs, companies, or keywords..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   className="pl-10"
                 />
               </div>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input placeholder="Location" className="pl-10 w-48" />
+                <Input
+                  placeholder="Location"
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="pl-10 w-48"
+                />
               </div>
             </div>
-            <Button>Search</Button>
+            <Button onClick={handleSearch}>Search</Button>
             <Button variant="outline">
               <Filter className="w-4 h-4 mr-2" />
               Filters
@@ -276,6 +333,10 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-xl">{job.title}</h3>
                       <Badge variant="secondary">{job.match}% Match</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Verified
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600 mb-2">
                       <Building2 className="w-4 h-4" />
@@ -328,8 +389,29 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button size="sm">Apply Now</Button>
-                  <Button size="sm" variant="outline">View Details</Button>
+                  {job.isApplied ? (
+                    <Button size="sm" disabled className="bg-emerald-500 hover:bg-emerald-500 gap-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Applied
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={(e) => openApplyDialog(job, e)}
+                      disabled={applying === job.id}
+                      className="gap-1"
+                    >
+                      {applying === job.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      Apply
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => setSelectedJob(job)}>
+                    View Details
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -376,7 +458,25 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
                   </div>
 
                   <div className="pt-4 border-t space-y-2">
-                    <Button className="w-full">Apply Now</Button>
+                    {selectedJob.isApplied ? (
+                      <Button className="w-full bg-emerald-500 hover:bg-emerald-500" disabled>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Applied
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full gap-2"
+                        onClick={() => openApplyDialog(selectedJob)}
+                        disabled={applying === selectedJob.id}
+                      >
+                        {applying === selectedJob.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                        Apply Now
+                      </Button>
+                    )}
                     <Button variant="outline" className="w-full gap-2">
                       <ExternalLink className="w-4 h-4" />
                       View on Company Site
@@ -448,6 +548,120 @@ export function JobMarketplace({ onNavigate, onLogout }: JobMarketplaceProps) {
           </div>
         </div>
       </div>
+
+      {/* Application Dialog */}
+      <Dialog open={applyDialogOpen} onOpenChange={setApplyDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-blue-600" />
+              Apply for Position
+            </DialogTitle>
+            <DialogDescription>
+              Submit your application to the recruiter
+            </DialogDescription>
+          </DialogHeader>
+
+          {applySuccess ? (
+            <div className="py-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-emerald-700 mb-2">Application Successful!</h3>
+              <p className="text-gray-500">Your application has been sent to the recruiter.</p>
+            </div>
+          ) : applyError ? (
+            <div className="py-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+              {applyError === 'already_applied' ? (
+                <>
+                  <h3 className="text-lg font-semibold text-amber-700 mb-2">You have already applied!</h3>
+                  <p className="text-gray-500">Your application is being reviewed by the recruiter.</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold text-red-700 mb-2">An error occurred</h3>
+                  <p className="text-gray-500">{applyError}</p>
+                </>
+              )}
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setApplyDialogOpen(false);
+                  setApplyError(null);
+                  setApplyingJob(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          ) : applyingJob && (
+            <div className="space-y-4 py-4">
+              {/* Job Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900">{applyingJob.title}</h4>
+                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                  <Building2 className="w-4 h-4" />
+                  <span>{applyingJob.company}</span>
+                  <span className="text-gray-300">•</span>
+                  <MapPin className="w-4 h-4" />
+                  <span>{applyingJob.location}</span>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Badge variant="secondary">{applyingJob.type}</Badge>
+                  <Badge variant="outline">{applyingJob.salary}</Badge>
+                </div>
+              </div>
+
+              {/* Cover Letter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Cover Letter (Optional)
+                </label>
+                <Textarea
+                  placeholder="Introduce yourself and explain why you're a fit for this role..."
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  rows={5}
+                  className="resize-none"
+                />
+                <p className="text-xs text-gray-400">
+                  A good cover letter helps you stand out from other candidates.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!applySuccess && (
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setApplyDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => applyingJob && handleApply(applyingJob.id)}
+                disabled={applying !== null}
+                className="gap-2"
+              >
+                {applying !== null ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Submit Application
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

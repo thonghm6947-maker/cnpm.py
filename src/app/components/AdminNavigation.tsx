@@ -25,9 +25,9 @@ export function AdminNavigation({
 }: AdminNavigationProps) {
   const navItems = [
     { id: 'admin-dashboard' as Page, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'admin-users' as Page, label: 'Quản lý Users', icon: Users },
+    { id: 'admin-users' as Page, label: 'User Management', icon: Users },
     { id: 'admin-subscriptions' as Page, label: 'Subscriptions', icon: CreditCard },
-    { id: 'admin-jobs' as Page, label: 'Duyệt tin', icon: FileCheck, badge: pendingJobsCount },
+    { id: 'admin-jobs' as Page, label: 'Review Jobs', icon: FileCheck, badge: pendingJobsCount },
   ];
 
   return (
@@ -65,7 +65,7 @@ export function AdminNavigation({
 
           <Button variant="ghost" onClick={onLogout} className="gap-2">
             <LogOut className="w-4 h-4" />
-            Đăng xuất
+            Logout
           </Button>
         </div>
       </div>

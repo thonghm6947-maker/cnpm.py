@@ -75,7 +75,7 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
             const mapJob = (job: any): Job => ({
                 id: job.id || job.job_id,
                 title: job.title,
-                company: job.company_name || job.company || job.recruiter?.company || 'Unknown Company',
+                company: job.company || job.recruiter?.company || 'Unknown Company',
                 recruiter: job.recruiter_name || job.recruiter?.full_name || job.recruiter || 'Unknown',
                 location: job.location || 'Remote',
                 salary: job.salary_range || job.salary || 'Thỏa thuận',
@@ -100,7 +100,7 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
             setJobs(uniqueJobs);
 
         } catch (err) {
-            setError('Không thể tải danh sách tin tuyển dụng. Vui lòng thử lại sau.');
+            setError('Cannot load job list. Please try again later.');
             console.error('Error fetching jobs:', err);
         } finally {
             setIsLoading(false);
@@ -131,7 +131,7 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
                 setIsPreviewOpen(false);
             }
         } catch (err) {
-            setError('Lỗi khi phê duyệt tin. Vui lòng thử lại.');
+            setError('Error approving job. Please try again.');
             console.error('Error approving job:', err);
         } finally {
             setIsProcessing(false);
@@ -161,7 +161,7 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
                 setIsPreviewOpen(false);
             }
         } catch (err) {
-            setError('Lỗi khi từ chối tin. Vui lòng thử lại.');
+            setError('Error rejecting job. Please try again.');
             console.error('Error rejecting job:', err);
         } finally {
             setIsProcessing(false);
@@ -180,9 +180,9 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
     };
 
     const getStatusBadge = (status: string) => {
-        if (status === 'pending') return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100"><Clock className="w-3 h-3 mr-1" />Chờ duyệt</Badge>;
-        if (status === 'approved') return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"><CheckCircle className="w-3 h-3 mr-1" />Đã duyệt</Badge>;
-        if (status === 'rejected') return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />Từ chối</Badge>;
+        if (status === 'pending') return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        if (status === 'approved') return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+        if (status === 'rejected') return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
         return null;
     };
 
@@ -192,7 +192,7 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
                 <AdminNavigation currentPage="admin-jobs" onNavigate={onNavigate} onLogout={onLogout} pendingJobsCount={0} />
                 <div className="flex items-center justify-center h-[calc(100vh-80px)]">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <span className="ml-3 text-slate-500">Đang tải danh sách tin tuyển dụng...</span>
+                    <span className="ml-3 text-slate-500">Loading job posts...</span>
                 </div>
             </div>
         );
@@ -203,8 +203,8 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
             <AdminNavigation currentPage="admin-jobs" onNavigate={onNavigate} onLogout={onLogout} pendingJobsCount={pendingJobs.length} />
             <div className="container mx-auto px-4 py-8">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900">Duyệt tin tuyển dụng</h1>
-                    <p className="text-slate-500 mt-1">Xem xét và phê duyệt các tin tuyển dụng từ Recruiters</p>
+                    <h1 className="text-3xl font-bold text-slate-900">Job Post Approval</h1>
+                    <p className="text-slate-500 mt-1">Review and approve job posts from Recruiters</p>
                 </div>
 
                 {/* Error message */}
@@ -212,14 +212,14 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
                         <AlertCircle className="w-5 h-5" />
                         <span>{error}</span>
-                        <Button variant="ghost" size="sm" onClick={() => setError(null)} className="ml-auto">Đóng</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setError(null)} className="ml-auto">Close</Button>
                     </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'pending' ? 'ring-2 ring-amber-500' : ''}`} onClick={() => setActiveTab('pending')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-amber-100"><Clock className="w-5 h-5 text-amber-600" /></div><div><p className="text-2xl font-bold text-slate-900">{pendingJobs.length}</p><p className="text-sm text-slate-500">Chờ duyệt</p></div></CardContent></Card>
-                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'approved' ? 'ring-2 ring-emerald-500' : ''}`} onClick={() => setActiveTab('approved')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-emerald-100"><CheckCircle className="w-5 h-5 text-emerald-600" /></div><div><p className="text-2xl font-bold text-slate-900">{approvedJobs.length}</p><p className="text-sm text-slate-500">Đã duyệt</p></div></CardContent></Card>
-                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'rejected' ? 'ring-2 ring-red-500' : ''}`} onClick={() => setActiveTab('rejected')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-red-100"><XCircle className="w-5 h-5 text-red-600" /></div><div><p className="text-2xl font-bold text-slate-900">{rejectedJobs.length}</p><p className="text-sm text-slate-500">Từ chối</p></div></CardContent></Card>
+                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'pending' ? 'ring-2 ring-amber-500' : ''}`} onClick={() => setActiveTab('pending')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-amber-100"><Clock className="w-5 h-5 text-amber-600" /></div><div><p className="text-2xl font-bold text-slate-900">{pendingJobs.length}</p><p className="text-sm text-slate-500">Pending</p></div></CardContent></Card>
+                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'approved' ? 'ring-2 ring-emerald-500' : ''}`} onClick={() => setActiveTab('approved')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-emerald-100"><CheckCircle className="w-5 h-5 text-emerald-600" /></div><div><p className="text-2xl font-bold text-slate-900">{approvedJobs.length}</p><p className="text-sm text-slate-500">Approved</p></div></CardContent></Card>
+                    <Card className={`border-0 shadow-md cursor-pointer transition-all ${activeTab === 'rejected' ? 'ring-2 ring-red-500' : ''}`} onClick={() => setActiveTab('rejected')}><CardContent className="p-4 flex items-center gap-4"><div className="p-3 rounded-lg bg-red-100"><XCircle className="w-5 h-5 text-red-600" /></div><div><p className="text-2xl font-bold text-slate-900">{rejectedJobs.length}</p><p className="text-sm text-slate-500">Rejected</p></div></CardContent></Card>
                 </div>
 
                 <Card className="border-0 shadow-lg">
@@ -228,18 +228,18 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
                             <div className="flex flex-col items-center justify-center py-12 text-slate-500">
                                 <FileCheck className="w-12 h-12 mb-4 text-slate-300" />
                                 <p className="text-lg font-medium">
-                                    {activeTab === 'pending' ? 'Không có tin chờ duyệt' :
-                                        activeTab === 'approved' ? 'Chưa có tin nào được duyệt' :
-                                            'Chưa có tin nào bị từ chối'}
+                                    {activeTab === 'pending' ? 'No pending jobs' :
+                                        activeTab === 'approved' ? 'No approved jobs' :
+                                            'No rejected jobs'}
                                 </p>
                             </div>
                         ) : (
                             <Table>
-                                <TableHeader><TableRow className="bg-slate-50"><TableHead className="font-semibold">Vị trí</TableHead><TableHead className="font-semibold">Công ty</TableHead><TableHead className="font-semibold">Địa điểm</TableHead><TableHead className="font-semibold">Mức lương</TableHead><TableHead className="font-semibold">Trạng thái</TableHead><TableHead className="font-semibold">Ngày gửi</TableHead><TableHead className="font-semibold text-right">Thao tác</TableHead></TableRow></TableHeader>
+                                <TableHeader><TableRow className="bg-slate-50"><TableHead className="font-semibold">Position</TableHead><TableHead className="font-semibold">Company</TableHead><TableHead className="font-semibold">Location</TableHead><TableHead className="font-semibold">Salary</TableHead><TableHead className="font-semibold">Status</TableHead><TableHead className="font-semibold">Submitted Date</TableHead><TableHead className="font-semibold text-right">Actions</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {filteredJobs.map((job) => (
                                         <TableRow key={job.id} className="hover:bg-slate-50">
-                                            <TableCell><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"><Briefcase className="w-4 h-4 text-white" /></div><div><p className="font-medium">{job.title}</p><p className="text-xs text-slate-500">bởi {job.recruiter}</p></div></div></TableCell>
+                                            <TableCell><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"><Briefcase className="w-4 h-4 text-white" /></div><div><p className="font-medium">{job.title}</p><p className="text-xs text-slate-500">by {job.recruiter}</p></div></div></TableCell>
                                             <TableCell><div className="flex items-center gap-2 text-slate-600"><Building2 className="w-4 h-4" />{job.company}</div></TableCell>
                                             <TableCell><div className="flex items-center gap-2 text-slate-500"><MapPin className="w-4 h-4" />{job.location}</div></TableCell>
                                             <TableCell><div className="flex items-center gap-2 text-slate-500"><DollarSign className="w-4 h-4" />{job.salary}</div></TableCell>
@@ -270,24 +270,24 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
 
                 <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                     <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader><DialogTitle className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-blue-500" />Xem trước tin tuyển dụng</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-blue-500" />Preview Job Post</DialogTitle></DialogHeader>
                         {selectedJob && (
                             <div className="space-y-6 py-4">
                                 <div><h2 className="text-2xl font-bold text-slate-900">{selectedJob.title}</h2><div className="flex items-center gap-4 mt-2 text-slate-500"><span className="flex items-center gap-1"><Building2 className="w-4 h-4" /> {selectedJob.company}</span><span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {selectedJob.location}</span></div></div>
                                 <div className="flex items-center gap-4"><div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700"><DollarSign className="w-4 h-4" /><span className="font-medium">{selectedJob.salary}</span></div>{getStatusBadge(selectedJob.status)}</div>
-                                <div><h3 className="font-semibold text-slate-900 mb-2">Mô tả công việc</h3><p className="text-slate-600 whitespace-pre-line">{selectedJob.description}</p></div>
-                                <div><h3 className="font-semibold text-slate-900 mb-2">Yêu cầu</h3><p className="text-slate-600 whitespace-pre-line">{selectedJob.requirements}</p></div>
-                                {selectedJob.status === 'rejected' && selectedJob.rejectReason && (<div className="p-4 rounded-lg bg-red-50 border border-red-200"><h3 className="font-semibold text-red-800 mb-1">Lý do từ chối</h3><p className="text-red-700">{selectedJob.rejectReason}</p></div>)}
-                                <div className="text-sm text-slate-400"><div className="flex items-center gap-1"><Calendar className="w-4 h-4" />Gửi duyệt: {formatDateTime(selectedJob.submittedAt)}</div><div className="mt-1">Người gửi: {selectedJob.recruiter}</div></div>
+                                <div><h3 className="font-semibold text-slate-900 mb-2">Job Description</h3><p className="text-slate-600 whitespace-pre-line">{selectedJob.description}</p></div>
+                                <div><h3 className="font-semibold text-slate-900 mb-2">Requirements</h3><p className="text-slate-600 whitespace-pre-line">{selectedJob.requirements}</p></div>
+                                {selectedJob.status === 'rejected' && selectedJob.rejectReason && (<div className="p-4 rounded-lg bg-red-50 border border-red-200"><h3 className="font-semibold text-red-800 mb-1">Rejection Reason</h3><p className="text-red-700">{selectedJob.rejectReason}</p></div>)}
+                                <div className="text-sm text-slate-400"><div className="flex items-center gap-1"><Calendar className="w-4 h-4" />Submitted: {formatDateTime(selectedJob.submittedAt)}</div><div className="mt-1">Submitted by: {selectedJob.recruiter}</div></div>
                             </div>
                         )}
                         {selectedJob?.status === 'pending' && (
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => handleRejectClick(selectedJob)} disabled={isProcessing}>
-                                    <XCircle className="w-4 h-4 mr-2" />Từ chối
+                                    <XCircle className="w-4 h-4 mr-2" />Reject
                                 </Button>
                                 <Button onClick={() => handleApprove(selectedJob.id)} className="bg-emerald-600 hover:bg-emerald-700" disabled={isProcessing}>
-                                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}Phê duyệt
+                                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}Approve
                                 </Button>
                             </DialogFooter>
                         )}
@@ -296,12 +296,12 @@ export function AdminJobReview({ onNavigate, onLogout }: AdminJobReviewProps) {
 
                 <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>Từ chối tin tuyển dụng</DialogTitle><DialogDescription>Vui lòng nhập lý do từ chối để thông báo cho Recruiter.</DialogDescription></DialogHeader>
-                        <div className="py-4"><Textarea placeholder="Nhập lý do từ chối..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={4} /></div>
+                        <DialogHeader><DialogTitle>Reject Job Post</DialogTitle><DialogDescription>Please enter the rejection reason to notify the Recruiter.</DialogDescription></DialogHeader>
+                        <div className="py-4"><Textarea placeholder="Enter rejection reason..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={4} /></div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)} disabled={isProcessing}>Hủy</Button>
+                            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)} disabled={isProcessing}>Cancel</Button>
                             <Button onClick={handleRejectConfirm} disabled={!rejectReason.trim() || isProcessing} className="bg-red-600 hover:bg-red-700">
-                                {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}Xác nhận từ chối
+                                {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}Confirm Reject
                             </Button>
                         </DialogFooter>
                     </DialogContent>

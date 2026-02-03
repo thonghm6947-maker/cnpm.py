@@ -50,12 +50,12 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
       <AdminNavigation currentPage="admin-subscriptions" onNavigate={onNavigate} onLogout={onLogout} pendingJobsCount={23} />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Quản lý Subscriptions</h1>
-          <p className="text-slate-500 mt-1">Quản lý gói dịch vụ và theo dõi doanh thu</p>
+          <h1 className="text-3xl font-bold text-slate-900">Subscription Management</h1>
+          <p className="text-slate-500 mt-1">Manage subscription plans and track revenue</p>
         </div>
 
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600"><DollarSign className="w-6 h-6 text-white" /></div><div><p className="text-sm text-slate-500">Tổng doanh thu</p><p className="text-2xl font-bold text-slate-900">{(totalRevenue / 1000000).toFixed(0)}M</p></div></div></CardContent></Card>
+          <Card className="border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600"><DollarSign className="w-6 h-6 text-white" /></div><div><p className="text-sm text-slate-500">Total Revenue</p><p className="text-2xl font-bold text-slate-900">{(totalRevenue / 1000000).toFixed(0)}M</p></div></div></CardContent></Card>
           <Card className="border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600"><TrendingUp className="w-6 h-6 text-white" /></div><div><p className="text-sm text-slate-500">MRR</p><p className="text-2xl font-bold text-slate-900">{(mrr / 1000000).toFixed(1)}M</p></div></div></CardContent></Card>
           <Card className="border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600"><Users className="w-6 h-6 text-white" /></div><div><p className="text-sm text-slate-500">Paid Subscribers</p><p className="text-2xl font-bold text-slate-900">{paidSubscribers.toLocaleString()}</p></div></div></CardContent></Card>
           <Card className="border-0 shadow-lg"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500"><CreditCard className="w-6 h-6 text-white" /></div><div><p className="text-sm text-slate-500">Conversion Rate</p><p className="text-2xl font-bold text-slate-900">{((paidSubscribers / totalSubscribers) * 100).toFixed(1)}%</p></div></div></CardContent></Card>
@@ -63,7 +63,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
 
         <div className="grid grid-cols-3 gap-6 mb-8">
           <Card className="col-span-2 border-0 shadow-lg">
-            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" />Doanh thu theo tháng</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" />Monthly Revenue</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={revenueHistory}>
@@ -71,7 +71,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" stroke="#94a3b8" />
                   <YAxis stroke="#94a3b8" tickFormatter={(val) => `${val / 1000000}M`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M VNĐ`, 'Doanh thu']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M VNĐ`, 'Revenue']} />
                   <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fill="url(#colorRev)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -79,7 +79,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-violet-500" />Phân bố Subscribers</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-violet-500" />Subscriber Distribution</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart><Pie data={subscriptionDistribution} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">{subscriptionDistribution.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}</Pie><Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} /></PieChart>
@@ -90,7 +90,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
         </div>
 
         <Card className="border-0 shadow-lg">
-          <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-500" />Các gói dịch vụ</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-500" />Subscription Plans</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-6">
               {plans.map((plan) => {
@@ -113,7 +113,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-md">
-            <DialogHeader><DialogTitle>Chỉnh sửa gói {editingPlan?.name}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Edit Plan: {editingPlan?.name}</DialogTitle></DialogHeader>
             {editingPlan && (
               <div className="space-y-4 py-4">
                 <div className="space-y-2"><label className="text-sm font-medium">Tên gói</label><Input value={editingPlan.name} onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })} /></div>
@@ -121,7 +121,7 @@ export function AdminSubscriptions({ onNavigate, onLogout }: AdminSubscriptionsP
                 <div className="space-y-2"><label className="text-sm font-medium">Thời hạn (ngày)</label><Input type="number" value={editingPlan.duration} onChange={(e) => setEditingPlan({ ...editingPlan, duration: parseInt(e.target.value) })} /></div>
               </div>
             )}
-            <DialogFooter><Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button><Button onClick={handleSavePlan}>Lưu thay đổi</Button></DialogFooter>
+            <DialogFooter><Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button><Button onClick={handleSavePlan}>Save Changes</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

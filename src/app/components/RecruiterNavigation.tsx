@@ -13,9 +13,9 @@ interface RecruiterNavigationProps {
 export function RecruiterNavigation({ currentPage, onNavigate, onLogout, newApplicationsCount = 0 }: RecruiterNavigationProps) {
     const navItems = [
         { id: 'recruiter-dashboard' as Page, label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'recruiter-jobs' as Page, label: 'Tin tuyển dụng', icon: Briefcase },
-        { id: 'recruiter-candidates' as Page, label: 'Ứng viên', icon: Users, badge: newApplicationsCount },
-        { id: 'recruiter-profile' as Page, label: 'Hồ sơ cá nhân', icon: User },
+        { id: 'recruiter-jobs' as Page, label: 'Job Posts', icon: Briefcase },
+        { id: 'recruiter-candidates' as Page, label: 'Candidates', icon: Users, badge: newApplicationsCount },
+        { id: 'recruiter-profile' as Page, label: 'My Profile', icon: User },
     ];
 
     return (
@@ -53,7 +53,7 @@ export function RecruiterNavigation({ currentPage, onNavigate, onLogout, newAppl
 
                     <Button variant="ghost" onClick={onLogout} className="gap-2">
                         <LogOut className="w-4 h-4" />
-                        Đăng xuất
+                        Logout
                     </Button>
                 </div>
             </div>

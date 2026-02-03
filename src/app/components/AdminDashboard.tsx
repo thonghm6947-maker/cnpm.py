@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { AdminNavigation } from './AdminNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import {
@@ -9,7 +10,9 @@ import {
   FileCheck,
   Clock,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import {
   AreaChart,
@@ -23,44 +26,132 @@ import {
   Bar
 } from 'recharts';
 import type { Page } from '../App';
+import { adminAPI } from '../../services/api';
 
 interface AdminDashboardProps {
   onNavigate: (page: Page) => void;
   onLogout: () => void;
 }
 
-const userGrowthData = [
-  { month: 'Jan', users: 120 },
-  { month: 'Feb', users: 180 },
-  { month: 'Mar', users: 250 },
-  { month: 'Apr', users: 310 },
-  { month: 'May', users: 420 },
-  { month: 'Jun', users: 580 },
-];
-
-const revenueData = [
-  { month: 'Jan', revenue: 12000000 },
-  { month: 'Feb', revenue: 18500000 },
-  { month: 'Mar', revenue: 22000000 },
-  { month: 'Apr', revenue: 28000000 },
-  { month: 'May', revenue: 35000000 },
-  { month: 'Jun', revenue: 42000000 },
-];
-
-const recentActivities = [
-  { id: 1, type: 'user_register', message: 'Nguyễn Văn A đã đăng ký tài khoản', time: '5 phút trước' },
-  { id: 2, type: 'job_submit', message: 'Công ty ABC gửi tin tuyển dụng mới', time: '15 phút trước' },
-  { id: 3, type: 'subscription', message: 'Công ty XYZ nâng cấp gói Premium', time: '1 giờ trước' },
-  { id: 4, type: 'user_register', message: 'Trần Thị B đã đăng ký tài khoản', time: '2 giờ trước' },
-  { id: 5, type: 'job_approve', message: 'Tin tuyển dụng "Senior Developer" đã được duyệt', time: '3 giờ trước' },
-];
+interface DashboardStats {
+  total_users: number;
+  active_users: number;
+  total_candidates: number;
+  total_recruiters: number;
+  total_jobs: number;
+  pending_jobs: number;
+  approved_jobs: number;
+  rejected_jobs: number;
+  total_applications: number;
+  total_subscriptions: number;
+  monthly_revenue: number;
+  user_growth: { month: string; users: number }[];
+  revenue_data: { month: string; revenue: number }[];
+  recent_activities: { id: number; type: string; message: string; time: string }[];
+}
 
 export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminAPI.getDashboardStats();
+
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        setError(response.message || 'Cannot load dashboard data');
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Server connection error. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Format number with comma separators
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('vi-VN');
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number): string => {
+    if (amount >= 1000000000) {
+      return `${(amount / 1000000000).toFixed(1)}B VNĐ`;
+    }
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(0)}M VNĐ`;
+    }
+    return `${formatNumber(amount)} VNĐ`;
+  };
+
+  // Default fallback data
+  const userGrowthData = dashboardData?.user_growth || [
+    { month: 'T1', users: 0 },
+    { month: 'T2', users: 0 },
+    { month: 'T3', users: 0 },
+    { month: 'T4', users: 0 },
+    { month: 'T5', users: 0 },
+    { month: 'T6', users: 0 },
+  ];
+
+  const revenueData = dashboardData?.revenue_data || [
+    { month: 'T1', revenue: 0 },
+    { month: 'T2', revenue: 0 },
+    { month: 'T3', revenue: 0 },
+    { month: 'T4', revenue: 0 },
+    { month: 'T5', revenue: 0 },
+    { month: 'T6', revenue: 0 },
+  ];
+
+  const recentActivities = dashboardData?.recent_activities || [];
+
   const stats = [
-    { title: 'Tổng Users', value: '2,847', change: '+12.5%', isUp: true, icon: Users, color: 'from-blue-500 to-blue-600' },
-    { title: 'Users Active', value: '1,923', change: '+8.2%', isUp: true, icon: UserCheck, color: 'from-emerald-500 to-emerald-600' },
-    { title: 'Tin chờ duyệt', value: '23', change: '-5 tin', isUp: false, icon: FileCheck, color: 'from-amber-500 to-orange-500' },
-    { title: 'Doanh thu tháng', value: '42M VNĐ', change: '+20%', isUp: true, icon: CreditCard, color: 'from-violet-500 to-purple-600' },
+    {
+      title: 'Total Users',
+      value: dashboardData ? formatNumber(dashboardData.total_users) : '0',
+      subtext: `${dashboardData?.total_candidates || 0} candidates, ${dashboardData?.total_recruiters || 0} recruiters`,
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      isUp: true,
+      change: '+12%'
+    },
+    {
+      title: 'Active Users',
+      value: dashboardData ? formatNumber(dashboardData.active_users) : '0',
+      subtext: 'Active in 30 days',
+      icon: UserCheck,
+      color: 'from-emerald-500 to-emerald-600',
+      isUp: true,
+      change: '+5%'
+    },
+    {
+      title: 'Pending Jobs',
+      value: dashboardData ? formatNumber(dashboardData.pending_jobs) : '0',
+      subtext: `${dashboardData?.approved_jobs || 0} approved, ${dashboardData?.rejected_jobs || 0} rejected`,
+      icon: FileCheck,
+      color: 'from-amber-500 to-orange-500',
+      isUp: false,
+      change: '-2%'
+    },
+    {
+      title: 'Monthly Revenue',
+      value: dashboardData ? formatCurrency(dashboardData.monthly_revenue) : '0 VNĐ',
+      subtext: `${dashboardData?.total_subscriptions || 0} subscriptions`,
+      icon: CreditCard,
+      color: 'from-violet-500 to-purple-600',
+      isUp: true,
+      change: '+8%'
+    },
   ];
 
   return (
@@ -70,7 +161,7 @@ export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Xin chào! Đây là tổng quan hệ thống hôm nay.</p>
+          <p className="text-slate-500 mt-1">Hello! Here is the system overview for today.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -103,7 +194,7 @@ export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-blue-500" />
-                Tăng trưởng Users
+                User Growth
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -129,7 +220,7 @@ export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-violet-500" />
-                Doanh thu theo tháng
+                Monthly Revenue
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -140,7 +231,7 @@ export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
                   <YAxis stroke="#94a3b8" tickFormatter={(value) => `${value / 1000000}M`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
-                    formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M VNĐ`, 'Doanh thu']}
+                    formatter={(value: number) => [`${(value / 1000000).toFixed(1)}M VNĐ`, 'Revenue']}
                   />
                   <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[4, 4, 0, 0]} />
                   <defs>
@@ -159,7 +250,7 @@ export function AdminDashboard({ onNavigate, onLogout }: AdminDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-slate-500" />
-              Hoạt động gần đây
+              Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>

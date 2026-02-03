@@ -108,21 +108,31 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                 setRecentApplications(mappedApps);
             }
 
-            // Fetch active jobs
-            const jobsResult = await recruiterAPI.getMyJobs('active');
+            // Fetch active jobs (including approved ones)
+            const jobsResult = await recruiterAPI.getMyJobs();
             if (jobsResult.jobs) {
-                const mappedJobs: ActiveJob[] = jobsResult.jobs.slice(0, 3).map((job: any) => ({
+                const allJobs = jobsResult.jobs;
+                const activeJobsList = allJobs.filter((j: any) => ['active', 'approved'].includes(String(j.status || '').toLowerCase()));
+
+                // Update active jobs list for display
+                const mappedJobs: ActiveJob[] = activeJobsList.slice(0, 3).map((job: any) => ({
                     id: job.id || job.job_id,
                     title: job.title,
                     applications: job.application_count || 0,
                     views: job.view_count || 0,
-                    status: job.status || 'active'
+                    status: String(job.status || 'active').toLowerCase()
                 }));
                 setActiveJobs(mappedJobs);
+
+                // Update active jobs count in stats if it differs
+                setStats(prev => ({
+                    ...prev,
+                    activeJobs: activeJobsList.length
+                }));
             }
 
         } catch (err) {
-            setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
+            setError('Cannot load dashboard data. Please try again later.');
             console.error('Error fetching dashboard data:', err);
         } finally {
             setIsLoading(false);
@@ -130,7 +140,7 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
     };
 
     const formatTimeAgo = (dateString: string) => {
-        if (!dateString) return 'Gần đây';
+        if (!dateString) return 'Recently';
         const date = new Date(dateString);
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
@@ -138,22 +148,22 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffMins < 60) return `${diffMins} phút trước`;
-        if (diffHours < 24) return `${diffHours} giờ trước`;
-        return `${diffDays} ngày trước`;
+        if (diffMins < 60) return `${diffMins} mins ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        return `${diffDays} days ago`;
     };
 
     const dashboardStats = [
-        { title: 'Tin đang hoạt động', value: stats.activeJobs.toString(), icon: Briefcase, color: 'from-blue-500 to-blue-600' },
-        { title: 'Tổng ứng viên', value: stats.totalCandidates.toString(), icon: Users, color: 'from-emerald-500 to-emerald-600' },
-        { title: 'Ứng viên mới', value: stats.newCandidates.toString(), icon: Clock, color: 'from-amber-500 to-orange-500' },
-        { title: 'Đã phỏng vấn', value: stats.interviewed.toString(), icon: FileCheck, color: 'from-violet-500 to-purple-600' },
+        { title: 'Active Jobs', value: stats.activeJobs.toString(), icon: Briefcase, color: 'from-blue-500 to-blue-600' },
+        { title: 'Total Candidates', value: stats.totalCandidates.toString(), icon: Users, color: 'from-emerald-500 to-emerald-600' },
+        { title: 'New Candidates', value: stats.newCandidates.toString(), icon: Clock, color: 'from-amber-500 to-orange-500' },
+        { title: 'Interviewed', value: stats.interviewed.toString(), icon: FileCheck, color: 'from-violet-500 to-purple-600' },
     ];
 
     const getStatusBadge = (status: string) => {
-        if (status === 'new') return <Badge className="bg-blue-100 text-blue-700">Mới</Badge>;
-        if (status === 'reviewing') return <Badge className="bg-amber-100 text-amber-700">Đang xem</Badge>;
-        if (status === 'interview') return <Badge className="bg-violet-100 text-violet-700">Phỏng vấn</Badge>;
+        if (status === 'new') return <Badge className="bg-blue-100 text-blue-700">New</Badge>;
+        if (status === 'reviewing') return <Badge className="bg-amber-100 text-amber-700">Reviewing</Badge>;
+        if (status === 'interview') return <Badge className="bg-violet-100 text-violet-700">Interview</Badge>;
         return null;
     };
 
@@ -163,7 +173,7 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                 <RecruiterNavigation currentPage="recruiter-dashboard" onNavigate={onNavigate} onLogout={onLogout} newApplicationsCount={0} />
                 <div className="flex items-center justify-center h-[calc(100vh-80px)]">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <span className="ml-3 text-slate-500">Đang tải dashboard...</span>
+                    <span className="ml-3 text-slate-500">Loading dashboard...</span>
                 </div>
             </div>
         );
@@ -177,10 +187,10 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-                        <p className="text-slate-500 mt-1">Xin chào! Đây là tổng quan tuyển dụng của bạn.</p>
+                        <p className="text-slate-500 mt-1">Hello! Here's your recruitment overview.</p>
                     </div>
                     <Button onClick={() => onNavigate('recruiter-jobs')} className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
-                        <Plus className="w-4 h-4 mr-2" />Đăng tin mới
+                        <Plus className="w-4 h-4 mr-2" />Post New Job
                     </Button>
                 </div>
 
@@ -189,7 +199,7 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
                         <AlertCircle className="w-5 h-5" />
                         <span>{error}</span>
-                        <Button variant="ghost" size="sm" onClick={() => fetchDashboardData()} className="ml-auto">Thử lại</Button>
+                        <Button variant="ghost" size="sm" onClick={() => fetchDashboardData()} className="ml-auto">Retry</Button>
                     </div>
                 )}
 
@@ -214,7 +224,7 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
 
                 <div className="grid grid-cols-3 gap-6 mb-8">
                     <Card className="col-span-2 border-0 shadow-lg">
-                        <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-500" />Lượt ứng tuyển trong tuần</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-500" />Weekly Applications</CardTitle></CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={250}>
                                 <AreaChart data={applicationTrend}>
@@ -232,26 +242,26 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                     <Card className="border-0 shadow-lg">
                         <CardHeader>
                             <CardTitle className="flex items-center justify-between">
-                                <span className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-blue-500" />Tin đang tuyển</span>
-                                <Button variant="ghost" size="sm" onClick={() => onNavigate('recruiter-jobs')}>Xem tất cả<ArrowUpRight className="w-4 h-4 ml-1" /></Button>
+                                <span className="flex items-center gap-2"><Briefcase className="w-5 h-5 text-blue-500" />Active Jobs</span>
+                                <Button variant="ghost" size="sm" onClick={() => onNavigate('recruiter-jobs')}>View All<ArrowUpRight className="w-4 h-4 ml-1" /></Button>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {activeJobs.length === 0 ? (
                                 <div className="text-center py-8 text-slate-500">
                                     <Briefcase className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                                    <p>Chưa có tin đang tuyển</p>
+                                    <p>No active jobs</p>
                                 </div>
                             ) : (
                                 activeJobs.map((job) => (
                                     <div key={job.id} className="p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                                         <div className="flex items-center justify-between mb-2">
                                             <h4 className="font-medium text-slate-900 text-sm">{job.title}</h4>
-                                            {job.status === 'pending' && (<Badge className="bg-amber-100 text-amber-700 text-xs">Chờ duyệt</Badge>)}
+                                            {job.status === 'pending' && (<Badge className="bg-amber-100 text-amber-700 text-xs">Pending</Badge>)}
                                         </div>
                                         <div className="flex items-center gap-4 text-xs text-slate-500">
-                                            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {job.applications} ứng viên</span>
-                                            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {job.views} lượt xem</span>
+                                            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {job.applications} candidates</span>
+                                            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {job.views} views</span>
                                         </div>
                                     </div>
                                 ))
@@ -263,15 +273,15 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                 <Card className="border-0 shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" />Ứng viên gần đây</span>
-                            <Button variant="ghost" size="sm" onClick={() => onNavigate('recruiter-candidates')}>Xem tất cả<ArrowUpRight className="w-4 h-4 ml-1" /></Button>
+                            <span className="flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" />Recent Candidates</span>
+                            <Button variant="ghost" size="sm" onClick={() => onNavigate('recruiter-candidates')}>View All<ArrowUpRight className="w-4 h-4 ml-1" /></Button>
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         {recentApplications.length === 0 ? (
                             <div className="text-center py-8 text-slate-500">
                                 <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                                <p>Chưa có ứng viên nào</p>
+                                <p>No candidates yet</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -279,7 +289,7 @@ export function RecruiterDashboard({ onNavigate, onLogout }: RecruiterDashboardP
                                     <div key={app.id} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-semibold">{app.name.charAt(0)}</div>
-                                            <div><p className="font-medium text-slate-900">{app.name}</p><p className="text-sm text-slate-500">Ứng tuyển: {app.position}</p></div>
+                                            <div><p className="font-medium text-slate-900">{app.name}</p><p className="text-sm text-slate-500">Applied for: {app.position}</p></div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-right">
