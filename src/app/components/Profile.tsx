@@ -26,10 +26,11 @@ import {
   Globe,
   Loader2,
   Save,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import type { Page } from '../App';
-import { profileAPI, authAPI } from '../../services/api';
+import { profileAPI, authAPI, subscriptionAPI } from '../../services/api';
 
 interface ProfileProps {
   onNavigate: (page: Page) => void;
@@ -42,6 +43,15 @@ interface ProfileData {
   phone: string;
   bio: string;
   avatar_url: string;
+}
+
+interface SubscriptionPackage {
+  package_id: number;
+  name: string;
+  price: number;
+  duration_days: number;
+  description: string;
+  features: string[];
 }
 
 export function Profile({ onNavigate, onLogout }: ProfileProps) {
@@ -57,11 +67,88 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [subscriptionPackages, setSubscriptionPackages] = useState<SubscriptionPackage[]>([]);
 
-  // Load profile on mount
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackage | null>(null);
+  const [paymentStep, setPaymentStep] = useState<'select' | 'input' | 'processing' | 'success'>('select');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank' | 'momo'>('card');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [userPlan, setUserPlan] = useState<'free' | 'premium'>('free');
+  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
+
+  // Load profile and subscription packages on mount
   useEffect(() => {
     loadProfile();
+    loadPackages();
+    checkSubscription();
   }, []);
+
+  const checkSubscription = async () => {
+    try {
+      const result = await subscriptionAPI.getMySubscription();
+      if (result.success) {
+        setUserPlan(result.plan || 'free');
+        if (result.subscription) {
+          setSubscriptionInfo(result.subscription);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check subscription:', err);
+    }
+  };
+
+  const loadPackages = async () => {
+    try {
+      const result = await subscriptionAPI.getPackages();
+      if (result.success && result.packages) {
+        setSubscriptionPackages(result.packages);
+      }
+    } catch (err) {
+      console.error('Failed to load subscription packages:', err);
+    }
+  };
+
+  const handleUpgradeClick = (pkg: SubscriptionPackage) => {
+    setSelectedPackage(pkg);
+    setPaymentStep('select');
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    if (!selectedPackage) return;
+
+    setPaymentStep('processing');
+    setIsProcessing(true);
+
+    // Simulate payment processing delay
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    try {
+      const result = await subscriptionAPI.subscribe(selectedPackage.package_id, paymentMethod);
+
+      if (result.success) {
+        setPaymentStep('success');
+        setUserPlan('premium');
+        setSubscriptionInfo(result.subscription);
+      } else {
+        setError(result.error || 'Payment failed');
+        setShowPaymentModal(false);
+      }
+    } catch (err) {
+      setError('Payment processing failed');
+      setShowPaymentModal(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+    setPaymentStep('select');
+    setSelectedPackage(null);
+  };
 
   const loadProfile = async () => {
     setIsLoading(true);
@@ -170,7 +257,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
             <Tabs defaultValue="general" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="general">General</TabsTrigger>
-                <TabsTrigger value="experience">Experience</TabsTrigger>
+
                 <TabsTrigger value="settings">Settings</TabsTrigger>
                 <TabsTrigger value="premium">Premium</TabsTrigger>
               </TabsList>
@@ -286,105 +373,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="experience" className="mt-6">
-                <Card className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl">Education</h2>
-                    <Button variant="outline" size="sm">Add Education</Button>
-                  </div>
 
-                  <div className="space-y-4">
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-medium">Bachelor of Computer Science</h3>
-                          <p className="text-sm text-gray-600">University of California</p>
-                        </div>
-                        <Button variant="ghost" size="sm">Edit</Button>
-                      </div>
-                      <p className="text-sm text-gray-500">2020 - 2024 • GPA: 3.8/4.0</p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-6 mt-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl">Work Experience</h2>
-                    <Button variant="outline" size="sm">Add Experience</Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-medium">Frontend Developer Intern</h3>
-                          <p className="text-sm text-gray-600">TechStartup Inc.</p>
-                        </div>
-                        <Button variant="ghost" size="sm">Edit</Button>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-2">Jun 2023 - Dec 2023 • 6 months</p>
-                      <p className="text-sm text-gray-600">
-                        Developed responsive web applications using React and TypeScript.
-                        Collaborated with design team to implement UI/UX improvements.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-6 mt-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl">Skills</h2>
-                    <Button variant="outline" size="sm">Manage Skills</Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      { name: 'React.js', level: 85 },
-                      { name: 'JavaScript', level: 90 },
-                      { name: 'TypeScript', level: 65 },
-                      { name: 'CSS/SCSS', level: 80 },
-                      { name: 'Git', level: 75 },
-                      { name: 'Node.js', level: 50 }
-                    ].map((skill, index) => (
-                      <div key={index}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm">{skill.name}</span>
-                          <span className="text-sm text-gray-500">{skill.level}%</span>
-                        </div>
-                        <Progress value={skill.level} className="h-2" />
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="p-6 mt-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl">Certifications</h2>
-                    <Button variant="outline" size="sm">Add Certificate</Button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {[
-                      { name: 'React Developer Certification', issuer: 'Udemy', date: 'Dec 2023' },
-                      { name: 'JavaScript Algorithms & Data Structures', issuer: 'freeCodeCamp', date: 'Aug 2023' },
-                      { name: 'Responsive Web Design', issuer: 'freeCodeCamp', date: 'Jun 2023' }
-                    ].map((cert, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Award className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <h4 className="text-sm font-medium">{cert.name}</h4>
-                            <p className="text-xs text-gray-500">{cert.issuer} • {cert.date}</p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" className="gap-2">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </TabsContent>
 
               <TabsContent value="settings" className="mt-6">
                 <Card className="p-6">
@@ -450,16 +439,17 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               </TabsContent>
 
               <TabsContent value="premium" className="mt-6">
-                <Card className="p-6 bg-blue-600 text-white mb-6">
+                <Card className="p-6 bg-gradient-to-r from-blue-600 to-violet-600 text-white mb-6">
                   <h2 className="text-2xl mb-2">Upgrade to Premium</h2>
                   <p className="opacity-90">Unlock advanced AI features and accelerate your career growth</p>
                 </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Free Plan - always show */}
                   <Card className="p-6">
                     <div className="mb-6">
                       <h3 className="text-xl mb-2">Free Plan</h3>
-                      <div className="text-3xl mb-1">$0</div>
+                      <div className="text-3xl mb-1">0 VND</div>
                       <p className="text-sm text-gray-600">Forever free</p>
                     </div>
                     <ul className="space-y-3 mb-6">
@@ -471,7 +461,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                         'Community support'
                       ].map((feature, index) => (
                         <li key={index} className="flex items-center gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                          <Check className="w-4 h-4 text-gray-400" />
                           {feature}
                         </li>
                       ))}
@@ -479,32 +469,70 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
                     <Badge variant="outline">Current Plan</Badge>
                   </Card>
 
-                  <Card className="p-6 border-2 border-blue-600 relative">
-                    <Badge className="absolute top-4 right-4">Popular</Badge>
-                    <div className="mb-6">
-                      <h3 className="text-xl mb-2">Premium Plan</h3>
-                      <div className="text-3xl mb-1">$19</div>
-                      <p className="text-sm text-gray-600">per month</p>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      {[
-                        'Advanced CV analysis with AI',
-                        'Unlimited AI coaching',
-                        'Priority job matching',
-                        'Exclusive courses & content',
-                        'Mock interview sessions',
-                        'Resume templates',
-                        'Direct recruiter messages',
-                        'Priority support'
-                      ].map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button className="w-full">Upgrade Now</Button>
-                  </Card>
+                  {/* Premium Plans from API */}
+                  {subscriptionPackages.length > 0 ? (
+                    subscriptionPackages.map((pkg) => (
+                      <Card key={pkg.package_id} className="p-6 border-2 border-blue-600 relative">
+                        <Badge className="absolute top-4 right-4 bg-gradient-to-r from-violet-500 to-purple-600">Popular</Badge>
+                        <div className="mb-6">
+                          <h3 className="text-xl mb-2">{pkg.name}</h3>
+                          <div className="text-3xl mb-1">{(pkg.price / 1000).toFixed(0)}K <span className="text-lg font-normal">VND</span></div>
+                          <p className="text-sm text-gray-600">/{pkg.duration_days} days</p>
+                        </div>
+                        <ul className="space-y-3 mb-6">
+                          {pkg.features && pkg.features.length > 0 ? (
+                            pkg.features.filter(f => f.trim()).map((feature, index) => (
+                              <li key={index} className="flex items-center gap-2 text-sm">
+                                <Check className="w-4 h-4 text-blue-600" />
+                                {feature}
+                              </li>
+                            ))
+                          ) : pkg.description ? (
+                            pkg.description.split('\n').filter(f => f.trim()).map((feature, index) => (
+                              <li key={index} className="flex items-center gap-2 text-sm">
+                                <Check className="w-4 h-4 text-blue-600" />
+                                {feature}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-sm text-gray-500">No features listed</li>
+                          )}
+                        </ul>
+                        {userPlan === 'premium' ? (
+                          <Badge className="w-full justify-center py-2 bg-gradient-to-r from-violet-500 to-purple-600">Active Subscription</Badge>
+                        ) : (
+                          <Button onClick={() => handleUpgradeClick(pkg)} className="w-full bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700">Upgrade Now</Button>
+                        )}
+                      </Card>
+                    ))
+                  ) : (
+                    <Card className="p-6 border-2 border-blue-600 relative">
+                      <Badge className="absolute top-4 right-4">Popular</Badge>
+                      <div className="mb-6">
+                        <h3 className="text-xl mb-2">Premium Plan</h3>
+                        <div className="text-3xl mb-1">199K <span className="text-lg font-normal">VND</span></div>
+                        <p className="text-sm text-gray-600">/30 days</p>
+                      </div>
+                      <ul className="space-y-3 mb-6">
+                        {[
+                          'Advanced CV analysis with AI',
+                          'Unlimited AI coaching',
+                          'Priority job matching',
+                          'Exclusive courses & content',
+                          'Mock interview sessions',
+                          'Resume templates',
+                          'Direct recruiter messages',
+                          'Priority support'
+                        ].map((feature, index) => (
+                          <li key={index} className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-blue-600" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button className="w-full" onClick={() => handleUpgradeClick({ package_id: 0, name: 'Premium', price: 199000, duration_days: 30, description: '', features: [] })}>Upgrade Now</Button>
+                    </Card>
+                  )}
                 </div>
 
                 <Card className="p-6 mt-6">
@@ -537,7 +565,11 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
               <h3 className="text-xl mb-1">{profile.full_name || 'Your Name'}</h3>
               <p className="text-sm text-gray-600 mb-3">Candidate</p>
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Badge>Free Plan</Badge>
+                {userPlan === 'premium' ? (
+                  <Badge className="bg-gradient-to-r from-violet-500 to-purple-600">Premium</Badge>
+                ) : (
+                  <Badge>Free Plan</Badge>
+                )}
                 <Badge variant="outline">Level 5</Badge>
               </div>
               <Button variant="outline" className="w-full mb-2">Upload Photo</Button>
@@ -548,23 +580,7 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
             </Card>
 
             {/* Profile Completion */}
-            <Card className="p-6">
-              <h3 className="mb-4">Profile Completion</h3>
-              <div className="mb-3">
-                <Progress value={75} className="h-2" />
-              </div>
-              <p className="text-sm text-gray-600 mb-4">75% complete - Almost there!</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Add work experience</span>
-                  <Badge variant="outline" className="text-xs">+10%</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Add skills assessment</span>
-                  <Badge variant="outline" className="text-xs">+15%</Badge>
-                </div>
-              </div>
-            </Card>
+
 
             {/* Contact Info */}
             <Card className="p-6">
@@ -611,6 +627,149 @@ export function Profile({ onNavigate, onLogout }: ProfileProps) {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+              <h2 className="text-2xl font-bold">Upgrade to {selectedPackage.name}</h2>
+              <p className="opacity-90">{(selectedPackage.price / 1000).toFixed(0)}K VND / {selectedPackage.duration_days} days</p>
+            </div>
+
+            <div className="p-6">
+              {paymentStep === 'select' && (
+                <>
+                  <h3 className="font-medium mb-4">Select Payment Method</h3>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => { setPaymentMethod('card'); setPaymentStep('input'); }}
+                      className="w-full p-4 border-2 rounded-xl flex items-center gap-4 hover:border-violet-500 hover:bg-violet-50 transition-all"
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Credit/Debit Card</p>
+                        <p className="text-sm text-gray-500">Visa, MasterCard, JCB</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setPaymentMethod('bank'); setPaymentStep('input'); }}
+                      className="w-full p-4 border-2 rounded-xl flex items-center gap-4 hover:border-violet-500 hover:bg-violet-50 transition-all"
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <Briefcase className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Bank Transfer</p>
+                        <p className="text-sm text-gray-500">VietComBank, BIDV, Techcombank</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setPaymentMethod('momo'); setPaymentStep('input'); }}
+                      className="w-full p-4 border-2 rounded-xl flex items-center gap-4 hover:border-violet-500 hover:bg-violet-50 transition-all"
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">M</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">MoMo Wallet</p>
+                        <p className="text-sm text-gray-500">Quick and easy payment</p>
+                      </div>
+                    </button>
+                  </div>
+                  <Button variant="outline" className="w-full mt-4" onClick={closePaymentModal}>Cancel</Button>
+                </>
+              )}
+
+              {paymentStep === 'input' && (
+                <>
+                  <h3 className="font-medium mb-4">
+                    {paymentMethod === 'card' ? 'Card Information' : paymentMethod === 'bank' ? 'Bank Transfer' : 'MoMo Payment'}
+                  </h3>
+                  {paymentMethod === 'card' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Card Number</Label>
+                        <Input placeholder="4242 4242 4242 4242" className="font-mono" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Expiry</Label>
+                          <Input placeholder="MM/YY" />
+                        </div>
+                        <div>
+                          <Label>CVV</Label>
+                          <Input placeholder="123" type="password" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Cardholder Name</Label>
+                        <Input placeholder="NGUYEN VAN A" />
+                      </div>
+                    </div>
+                  )}
+                  {paymentMethod === 'bank' && (
+                    <div className="p-4 bg-gray-50 rounded-xl space-y-2">
+                      <p className="text-sm"><strong>Bank:</strong> VietComBank</p>
+                      <p className="text-sm"><strong>Account:</strong> 1234567890</p>
+                      <p className="text-sm"><strong>Name:</strong> CAREERMATE JSC</p>
+                      <p className="text-sm"><strong>Amount:</strong> {(selectedPackage.price).toLocaleString()} VND</p>
+                      <p className="text-sm"><strong>Content:</strong> CM{profile.email?.split('@')[0] || 'USER'}</p>
+                    </div>
+                  )}
+                  {paymentMethod === 'momo' && (
+                    <div className="text-center p-6 bg-pink-50 rounded-xl">
+                      <div className="w-32 h-32 bg-white mx-auto rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                        <span className="text-4xl">📱</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Open MoMo app and scan QR code</p>
+                      <p className="text-xs text-gray-500 mt-2">Or transfer to: 0987654321</p>
+                    </div>
+                  )}
+                  <div className="flex gap-3 mt-6">
+                    <Button variant="outline" className="flex-1" onClick={() => setPaymentStep('select')}>Back</Button>
+                    <Button className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600" onClick={handlePayment}>
+                      Pay {(selectedPackage.price / 1000).toFixed(0)}K VND
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {paymentStep === 'processing' && (
+                <div className="text-center py-8">
+                  <Loader2 className="w-16 h-16 animate-spin text-violet-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-medium mb-2">Processing Payment...</h3>
+                  <p className="text-gray-500">Please wait, do not close this window</p>
+                </div>
+              )}
+
+              {paymentStep === 'success' && (
+                <div className="text-center py-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
+                  <p className="text-gray-600 mb-4">You are now a Premium member</p>
+                  <div className="p-4 bg-violet-50 rounded-xl text-left space-y-2">
+                    <p className="text-sm"><strong>Package:</strong> {selectedPackage.name}</p>
+                    {subscriptionInfo && (
+                      <>
+                        <p className="text-sm"><strong>Valid until:</strong> {new Date(subscriptionInfo.end_date).toLocaleDateString()}</p>
+                      </>
+                    )}
+                  </div>
+                  <Button className="w-full mt-6 bg-gradient-to-r from-violet-600 to-purple-600" onClick={closePaymentModal}>
+                    Start Using Premium
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

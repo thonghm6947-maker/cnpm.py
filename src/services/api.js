@@ -511,3 +511,75 @@ export const aiAPI = {
         return handleResponse(res);
     }
 };
+
+// ============ Subscription API ============
+export const subscriptionAPI = {
+    // Public - Get available packages
+    getPackages: async () => {
+        const res = await fetch(`${API_BASE}/api/subscriptions/packages`);
+        return res.json();
+    },
+
+    // Admin - Get packages with stats
+    getAdminPackages: async () => {
+        const res = await fetch(`${API_BASE}/api/admin/subscriptions/packages`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    // Admin - Create package
+    createPackage: async (data) => {
+        const res = await fetch(`${API_BASE}/api/admin/subscriptions/packages`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        return handleResponse(res);
+    },
+
+    // Admin - Update package
+    updatePackage: async (packageId, data) => {
+        const res = await fetch(`${API_BASE}/api/admin/subscriptions/packages/${packageId}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        return handleResponse(res);
+    },
+
+    // Admin - Delete package
+    deletePackage: async (packageId) => {
+        const res = await fetch(`${API_BASE}/api/admin/subscriptions/packages/${packageId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    // Admin - Get stats
+    getStats: async () => {
+        const res = await fetch(`${API_BASE}/api/admin/subscriptions/stats`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    },
+
+    // User - Subscribe to package (mock payment)
+    subscribe: async (packageId, paymentMethod = 'card') => {
+        const res = await fetch(`${API_BASE}/api/subscriptions/subscribe`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ package_id: packageId, payment_method: paymentMethod })
+        });
+        return handleResponse(res);
+    },
+
+    // User - Get my subscription status
+    getMySubscription: async () => {
+        const res = await fetch(`${API_BASE}/api/subscriptions/my-subscription`, {
+            headers: authHeaders()
+        });
+        return handleResponse(res);
+    }
+};

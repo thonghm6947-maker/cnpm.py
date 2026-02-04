@@ -20,9 +20,16 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  PlayCircle
+  PlayCircle,
+  X,
+  ExternalLink,
+  Square,
+  CheckSquare,
+  Loader2,
+  Map
 } from 'lucide-react';
 import type { Page } from '../App';
+import { aiAPI } from '../../services/api';
 
 
 interface LearningHubProps {
@@ -58,6 +65,24 @@ interface QuizResult {
   timeTaken: number;
 }
 
+// Roadmap types
+interface RoadmapStep {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+  resourceUrl?: string;
+  subtopics: { name: string; completed: boolean }[];
+}
+
+interface DetailedRoadmap {
+  id: number;
+  title: string;
+  duration: string;
+  skills: string[];
+  steps: RoadmapStep[];
+}
+
 export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
   // Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
@@ -68,6 +93,16 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [quizStartTime, setQuizStartTime] = useState(0);
+
+  // Roadmap modal state
+  const [selectedRoadmap, setSelectedRoadmap] = useState<DetailedRoadmap | null>(null);
+  const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
+
+  // Roadmap data state
+  const [detailedRoadmaps, setDetailedRoadmaps] = useState<DetailedRoadmap[]>([]);
+  const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(false);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
   // Quiz data
   const [quizzes, setQuizzes] = useState<Quiz[]>([
@@ -461,29 +496,69 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
   ]);
 
 
-  const roadmaps = [
-    {
-      title: 'Frontend Developer',
-      steps: 7,
-      completed: 4,
-      duration: '6 months',
-      skills: ['HTML/CSS', 'JavaScript', 'React', 'TypeScript']
-    },
-    {
-      title: 'Full Stack Developer',
-      steps: 12,
-      completed: 5,
-      duration: '12 months',
-      skills: ['Frontend', 'Backend', 'Database', 'DevOps']
-    },
-    {
-      title: 'React Specialist',
-      steps: 5,
-      completed: 3,
-      duration: '3 months',
-      skills: ['React', 'Redux', 'Testing', 'Performance']
+  // Fetch AI-generated roadmaps from API
+  useEffect(() => {
+    loadRoadmaps();
+  }, []);
+
+  const loadRoadmaps = async () => {
+    setIsLoadingRoadmaps(true);
+    setRoadmapError(null);
+    try {
+      const response = await aiAPI.getRoadmaps();
+
+      if (response.success && response.data) {
+        // Transform API roadmaps to DetailedRoadmap format
+        const transformed: DetailedRoadmap[] = response.data.map((roadmap: any) => {
+          // Handle phases - might be string (JSON) or array
+          let phases = roadmap.phases;
+          if (typeof phases === 'string') {
+            try {
+              phases = JSON.parse(phases);
+            } catch {
+              console.error('Failed to parse phases:', phases);
+              phases = [];
+            }
+          }
+          phases = phases || [];
+
+          return {
+            id: roadmap.roadmap_id,
+            title: roadmap.target_role,
+            duration: roadmap.estimated_duration || '3-6 months',
+            skills: phases.flatMap((phase: any) => phase.skills_to_learn || []).slice(0, 4) || [],
+            steps: phases.map((phase: any, index: number) => ({
+              id: phase.phase || index + 1,
+              title: phase.title || `Phase ${index + 1}`,
+              description: `Phase ${phase.phase || index + 1}: ${phase.title || 'Learning Phase'}. Duration: ${phase.duration || 'TBD'}`,
+              completed: false,
+              resourceUrl: phase.resources?.[0] || undefined,
+              subtopics: (phase.skills_to_learn || []).map((skill: string) => ({
+                name: skill,
+                completed: false
+              }))
+            }))
+          };
+        });
+
+        setDetailedRoadmaps(transformed);
+      }
+    } catch (err) {
+      console.error('Failed to load roadmaps:', err);
+      setRoadmapError('Failed to load roadmaps. Create one in Career Roadmap.');
+    } finally {
+      setIsLoadingRoadmaps(false);
     }
-  ];
+  };
+
+  // Simple roadmaps for card display
+  const roadmaps = detailedRoadmaps.map(r => ({
+    title: r.title,
+    steps: r.steps.length,
+    completed: r.steps.filter(s => s.completed).length,
+    duration: r.duration,
+    skills: r.skills
+  }));
 
   const achievements = [
     { icon: '🏆', title: 'Course Completionist', desc: 'Completed 3 courses', earned: true },
@@ -782,61 +857,93 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
           </TabsContent>
 
           <TabsContent value="roadmaps">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {roadmaps.map((roadmap, index) => (
-                <Card key={index} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl mb-1">{roadmap.title}</h3>
-                      <p className="text-sm text-gray-600">{roadmap.duration} learning path</p>
-                    </div>
-                    <Badge variant="secondary">
-                      {roadmap.completed}/{roadmap.steps} steps
-                    </Badge>
-                  </div>
-
-                  <Progress value={(roadmap.completed / roadmap.steps) * 100} className="h-2 mb-4" />
-
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium mb-2">Key Skills</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {roadmap.skills.map((skill, idx) => (
-                        <Badge key={idx} variant="outline">{skill}</Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    {Array.from({ length: roadmap.steps }).map((_, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        {idx < roadmap.completed ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <div className="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
-                        )}
-                        <span className="text-sm">
-                          {idx < roadmap.completed ? 'Completed' : 'Upcoming'} - Step {idx + 1}
-                        </span>
+            {isLoadingRoadmaps ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+                <p className="text-gray-600">Loading your roadmaps...</p>
+              </div>
+            ) : roadmaps.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Map className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Roadmaps Yet</h3>
+                <p className="text-gray-600 text-center max-w-md mb-6">
+                  {roadmapError || "Create a personalized AI-powered career roadmap to start your learning journey."}
+                </p>
+                <Button onClick={() => onNavigate('career-roadmap')} className="gap-2">
+                  <Map className="w-4 h-4" />
+                  Create Career Roadmap
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {roadmaps.map((roadmap, index) => (
+                  <Card key={index} className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-xl mb-1">{roadmap.title}</h3>
+                        <p className="text-sm text-gray-600">{roadmap.duration} learning path</p>
                       </div>
-                    ))}
-                  </div>
+                      <Badge variant="secondary">
+                        {roadmap.completed}/{roadmap.steps} steps
+                      </Badge>
+                    </div>
 
-                  <Button className="w-full">
-                    {roadmap.completed > 0 ? 'Continue Learning' : 'Start Roadmap'}
+                    <Progress value={(roadmap.completed / roadmap.steps) * 100} className="h-2 mb-4" />
+
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Key Skills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {roadmap.skills.map((skill, idx) => (
+                          <Badge key={idx} variant="outline">{skill}</Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                      {Array.from({ length: Math.min(roadmap.steps, 6) }).map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          {idx < roadmap.completed ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <div className="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                          )}
+                          <span className="text-sm">
+                            {idx < roadmap.completed ? 'Completed' : 'Upcoming'} - Phase {idx + 1}
+                          </span>
+                        </div>
+                      ))}
+                      {roadmap.steps > 6 && (
+                        <p className="text-xs text-gray-500 pl-6">+{roadmap.steps - 6} more phases...</p>
+                      )}
+                    </div>
+
+                    <Button className="w-full" onClick={() => {
+                      const detailed = detailedRoadmaps.find(r => r.title === roadmap.title);
+                      if (detailed) {
+                        setSelectedRoadmap(detailed);
+                        setSelectedStep(detailed.steps.find(s => !s.completed) || detailed.steps[0]);
+                        setIsRoadmapModalOpen(true);
+                      }
+                    }}>
+                      {roadmap.completed > 0 ? 'Continue Learning' : 'Start Roadmap'}
+                    </Button>
+                  </Card>
+                ))}
+
+                <Card className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+                  <h3 className="text-xl font-semibold mb-3">Create New Roadmap</h3>
+                  <p className="mb-4 opacity-90">
+                    Let our AI create a personalized learning roadmap based on your career goals and current skills.
+                  </p>
+                  <Button variant="secondary" onClick={() => onNavigate('career-roadmap')}>
+                    <Map className="w-4 h-4 mr-2" />
+                    Create Roadmap
                   </Button>
                 </Card>
-              ))}
-
-              <Card className="p-6 bg-blue-600 text-white">
-                <h3 className="text-xl mb-3">Create Custom Roadmap</h3>
-                <p className="mb-4 opacity-90">
-                  Let our AI create a personalized learning roadmap based on your career goals and current skills.
-                </p>
-                <Button variant="secondary" onClick={() => onNavigate('career-coach')}>
-                  Get AI Recommendations
-                </Button>
-              </Card>
-            </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="achievements">
@@ -1130,6 +1237,167 @@ export function LearningHub({ onNavigate, onLogout }: LearningHubProps) {
               </DialogFooter>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Visual Roadmap Modal */}
+      <Dialog open={isRoadmapModalOpen} onOpenChange={setIsRoadmapModalOpen}>
+        <DialogContent className="max-w-[98vw] w-[1600px] h-[90vh] p-0 overflow-hidden">
+          <div className="flex h-full min-w-0">
+            {/* Flowchart Area */}
+            <div className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50 overflow-auto p-8">
+              <DialogHeader className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl">{selectedRoadmap?.title}</DialogTitle>
+                    <p className="text-sm text-gray-500 mt-1">{selectedRoadmap?.duration} learning path</p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setIsRoadmapModalOpen(false)}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              {/* Visual Flowchart - Vertical Timeline */}
+              {selectedRoadmap && (
+                <div className="relative max-w-2xl mx-auto">
+                  {/* Start node */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-20 h-10 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                      START
+                    </div>
+                    <div className="h-0.5 flex-1 bg-gray-200"></div>
+                  </div>
+
+                  {/* Steps - Vertical Layout */}
+                  <div className="space-y-4 pl-4 border-l-2 border-gray-200 ml-10">
+                    {selectedRoadmap.steps.map((step, index) => (
+                      <div key={step.id} className="relative">
+                        {/* Connection dot */}
+                        <div className={`absolute -left-[25px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow
+                          ${step.completed ? 'bg-teal-500' : selectedStep?.id === step.id ? 'bg-amber-400' : 'bg-blue-500'}
+                        `}></div>
+
+                        {/* Step Box */}
+                        <div
+                          onClick={() => setSelectedStep(step)}
+                          className={`
+                            ml-4 p-4 rounded-xl cursor-pointer
+                            transition-all duration-200 shadow-md hover:shadow-lg
+                            ${step.completed
+                              ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white'
+                              : selectedStep?.id === step.id
+                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-white ring-2 ring-amber-200'
+                                : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold">{step.title}</h4>
+                              <p className="text-sm opacity-80 line-clamp-1">{step.description}</p>
+                            </div>
+                            {step.completed && <CheckCircle className="w-6 h-6" />}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* End node */}
+                  <div className="flex items-center gap-4 mt-4 ml-10 pl-4">
+                    <div className="w-20 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                      END
+                    </div>
+                    <div className="h-0.5 flex-1 bg-gray-200"></div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="flex items-center justify-center gap-8 mt-8 pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-teal-500"></div>
+                      <span className="text-sm text-gray-600">Completed</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-amber-400"></div>
+                      <span className="text-sm text-gray-600">Current</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                      <span className="text-sm text-gray-600">Upcoming</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Topic Details Sidebar - Only show when a step is selected */}
+            {selectedStep && (
+              <div className="w-[380px] min-w-[380px] flex-shrink-0 bg-white border-l border-gray-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
+                <div className="p-4 border-b border-gray-200 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-500 text-sm uppercase tracking-wide">Topic Details</h3>
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedStep(null)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5">
+                  <h2 className="text-lg font-bold text-gray-900 mb-2">{selectedStep.title}</h2>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-5">
+                    {selectedStep.description}
+                  </p>
+
+                  {selectedStep.resourceUrl && (
+                    <div className="mb-5">
+                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4" />
+                        Learning Resources
+                      </h4>
+                      <a
+                        href={selectedStep.resourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm break-all"
+                      >
+                        {selectedStep.resourceUrl}
+                      </a>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Subtopics</h4>
+                    <div className="space-y-2">
+                      {selectedStep.subtopics.map((subtopic, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-lg transition-colors">
+                          {subtopic.completed ? (
+                            <CheckSquare className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                          )}
+                          <span className={`text-sm ${subtopic.completed ? 'text-gray-600' : 'text-gray-900'}`}>
+                            {subtopic.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-gray-200 flex-shrink-0">
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    Continue Learning
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
