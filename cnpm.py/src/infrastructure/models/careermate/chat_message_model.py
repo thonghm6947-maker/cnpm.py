@@ -4,12 +4,10 @@ from infrastructure.databases.base import Base
 from datetime import datetime
 import enum
 
-
 class SenderType(enum.Enum):
-    USER = "user"
-    AI = "ai"
-    SYSTEM = "system"
-
+    USER = 'user'
+    AI = 'ai'
+    SYSTEM = 'system'
 
 class ChatMessageModel(Base):
     """Individual message in a chat session."""
@@ -23,7 +21,7 @@ class ChatMessageModel(Base):
     sent_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    session = relationship("ChatSessionModel", back_populates="messages")
+    session = relationship('ChatSessionModel', back_populates='messages')
 
     def __repr__(self):
         return f"<ChatMessageModel(msg_id={self.msg_id}, sender='{self.sender}')>"

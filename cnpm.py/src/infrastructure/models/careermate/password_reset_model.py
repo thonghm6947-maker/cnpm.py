@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from infrastructure.databases.base import Base
 from datetime import datetime, timedelta
 
-
 class PasswordResetModel(Base):
     """Store password reset OTP tokens."""
     __tablename__ = 'cm_password_resets'
@@ -17,11 +16,9 @@ class PasswordResetModel(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def is_expired(self) -> bool:
-        """Check if OTP has expired."""
         return datetime.utcnow() > self.expires_at
 
     def is_valid(self) -> bool:
-        """Check if OTP is still valid (not used, not expired, attempts < 5)."""
         return not self.is_used and not self.is_expired() and self.attempts < 5
 
     def __repr__(self):

@@ -4,26 +4,22 @@ from infrastructure.databases.base import Base
 from datetime import datetime
 import enum
 
-
 class JobStatus(str, enum.Enum):
-    DRAFT = "DRAFT"
-    PENDING = "PENDING"
-    OPEN = "OPEN"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    CLOSED = "CLOSED"
-    PAUSED = "PAUSED"
+    DRAFT = 'DRAFT'
+    PENDING = 'PENDING'
+    OPEN = 'OPEN'
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+    CLOSED = 'CLOSED'
+    PAUSED = 'PAUSED'
 
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
-            # Try matching member name (case-insensitive)
-            # This handles "pending" -> PENDING
             normalized = value.upper()
             if normalized in cls.__members__:
                 return cls[normalized]
         return None
-
 
 class JobPostModel(Base):
     """Job posting by recruiters."""
@@ -37,21 +33,21 @@ class JobPostModel(Base):
     description = Column(Text, nullable=True)
     salary_min = Column(Numeric(15, 2), nullable=True)
     salary_max = Column(Numeric(15, 2), nullable=True)
-    salary_range = Column(String(100), nullable=True)  # Text description like "Under 10 million"
-    company_name = Column(String(255), nullable=True)  # Direct company name from recruiter
+    salary_range = Column(String(100), nullable=True)
+    company_name = Column(String(255), nullable=True)
     location = Column(String(255), nullable=True)
-    job_type = Column(String(50), nullable=True)  # full-time, part-time, contract, etc.
+    job_type = Column(String(50), nullable=True)
     deadline = Column(DateTime, nullable=True)
     status = Column(String(50), nullable=False, default=JobStatus.DRAFT.value)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    company = relationship("CompanyModel", back_populates="job_posts")
-    recruiter = relationship("RecruiterProfileModel", back_populates="job_posts")
-    required_skills = relationship("JobSkillModel", back_populates="job_post")
-    applications = relationship("JobApplicationModel", back_populates="job_post")
-    saved_by = relationship("SavedJobModel", back_populates="job_post")
+    company = relationship('CompanyModel', back_populates='job_posts')
+    recruiter = relationship('RecruiterProfileModel', back_populates='job_posts')
+    required_skills = relationship('JobSkillModel', back_populates='job_post')
+    applications = relationship('JobApplicationModel', back_populates='job_post')
+    saved_by = relationship('SavedJobModel', back_populates='job_post')
 
     def __repr__(self):
         return f"<JobPostModel(job_id={self.job_id}, title='{self.title}', status='{self.status}')>"

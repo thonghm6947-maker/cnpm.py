@@ -4,9 +4,8 @@ from infrastructure.databases.base import Base
 
 class DatabaseMSSQL(AbstractDatabase):
     def __init__(self):
-        # Do not call super().__init__() as it defaults to SQLite/Postgres via DevelopmentConfig
         self.session = session
         self.engine = engine
-        
-    def init_database(self, app):
+
+    def init_database(self):
         Base.metadata.create_all(bind=self.engine)

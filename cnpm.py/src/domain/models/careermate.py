@@ -1,21 +1,18 @@
-# CareerMate Domain Models
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
-
 
 @dataclass
 class User:
     """User domain entity."""
     email: str
-    role: str  # candidate, recruiter, admin
-    password_hash: Optional[str] = None  # Optional for OAuth users
+    role: str
+    password_hash: Optional[str] = None
     user_id: Optional[int] = None
     is_active: bool = True
     created_at: Optional[datetime] = None
-    oauth_provider: Optional[str] = None  # e.g., "google", "facebook"
-    oauth_id: Optional[str] = None  # Provider's user ID
-
+    oauth_provider: Optional[str] = None
+    oauth_id: Optional[str] = None
 
 @dataclass
 class CandidateProfile:
@@ -26,7 +23,6 @@ class CandidateProfile:
     phone: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
-
 
 @dataclass
 class RecruiterProfile:
@@ -43,7 +39,6 @@ class RecruiterProfile:
     company_name: Optional[str] = None
     email: Optional[str] = None
     avatar_url: Optional[str] = None
-
 
 @dataclass
 class Company:

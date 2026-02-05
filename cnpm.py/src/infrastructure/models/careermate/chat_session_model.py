@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from infrastructure.databases.base import Base
 from datetime import datetime
 
-
 class ChatSessionModel(Base):
     """Chat session with AI assistant."""
     __tablename__ = 'cm_chat_sessions'
@@ -16,8 +15,8 @@ class ChatSessionModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    user = relationship("CMUserModel", back_populates="chat_sessions")
-    messages = relationship("ChatMessageModel", back_populates="session", order_by="ChatMessageModel.sent_at")
+    user = relationship('CMUserModel', back_populates='chat_sessions')
+    messages = relationship('ChatMessageModel', back_populates='session', order_by='ChatMessageModel.sent_at')
 
     def __repr__(self):
         return f"<ChatSessionModel(session_id={self.session_id}, topic='{self.topic}')>"

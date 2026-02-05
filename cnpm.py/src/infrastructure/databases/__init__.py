@@ -34,10 +34,10 @@ def init_db(app):
     
     if db_type == 'mssql':
         # Use MSSQL factory
-        FactoryDatabase.get_database('MSSQL').init_database(app)
+        FactoryDatabase.get_database('MSSQL').init_database()
     else:
         # Default to PostgreSQL/SQLite
-        FactoryDatabase.get_database('POSTGREE').init_database(app)
+        FactoryDatabase.get_database('POSTGREE').init_database()
     
 # Migration Entities -> tables
 from infrastructure.databases.mssql import Base
